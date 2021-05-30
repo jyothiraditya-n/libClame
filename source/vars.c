@@ -14,28 +14,42 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
-#ifndef LIBCLAME_H
-#define LIBCLAME_H 1
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
-typedef struct LC_entry_s {
-	struct LC_entry_s *next;
-	const char *instr;
+#include <libClame/vars.h>
 
-	void (*func) (void);
-	char **data;
+LCv_t *LC_vars;
 
-	int array_min;
-	int array_max;
-	int *array_len;
+LCv_t *LCv_new() {
+	LCv_t *new = malloc(sizeof(LCv_t));
+	if(!new) return NULL;
 
-} LC_entry_t;
+	new -> next = LC_vars;
+	new -> id = "";
+	new -> fmt = "";
+	new -> data = NULL;
 
-extern LC_entry_t *LC_new_entry();
-extern int LC_parse(int argc, char **argv);
+	new -> len = NULL;
+	new -> min_len = 0;
+	new -> max_len = 0;
+	new -> size = 0;
 
-#define LC_OK 0
-#define LC_NO_ENTRIES 1
-#define LC_BAD_ENTRY 2
-#define LC_BAD_INSTR 3
+	new -> dirty = false;
 
-#endif
+	LC_vars = new;
+	return LC_vars;
+}
+
+LCv_t *LCv_get(const char *id) {
+	LCv_t *var = LC_vars;
+
+	while(var) {
+		if(!strcmp(var -> id, id)) break;
+		else var = var -> next;
+	}
+
+	return var;
+}

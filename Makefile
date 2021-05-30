@@ -18,8 +18,7 @@ headers = $(wildcard include/*.h)
 objs = $(patsubst %.c,%.o,$(wildcard source/*.c))
 
 demos = $(patsubst demo/%.c,%,$(wildcard demo/*.c))
-demo_objs = $(patsubst %.c,%.o,$(wildcard demo/*.c))
-demo_shs += $(patsubst demo/%.sh,%,$(wildcard demo/*.sh))
+objs += $(patsubst %.c,%.o,$(wildcard demo/*.c))
 
 files = $(foreach file,$(objs) $(demo_objs),$(wildcard $(file)))
 files += $(foreach file,$(demos) $(demo_shs),$(wildcard $(file)))
@@ -36,19 +35,13 @@ $(objs) : %.o : %.c $(headers)
 libClame.a : $(objs)
 	$(AR) -r libClame.a $(objs)
 
-$(demo_objs) : %.o : %.c $(headers)
-	$(CC) $(CFLAGS) -c $< -o $@
-
 $(demos) : % : demo/%.o libClame.a
 	$(CC) $< -o $@ $(LD_LIBS)
-
-$(demo_shs) : % : demo/%.sh
-	cp $< $@; chmod +x $@
 
 .DEFAULT_GOAL = all
 .PHONY : all clean
 
-all : libClame.a $(demos) $(demo_shs)
+all : libClame.a $(demos)
 
 clean :
 	$(CLEAN)

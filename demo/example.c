@@ -14,25 +14,41 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <libClame.h>
 
-char *name;
-char *message = "default message";
+#include <libClame/args.h>
+#include <libClame/vars.h>
 
-char *two_things[2] = {
-	"first default thing",
-	"second default thing"
-};
+static const char *name;
 
-char *some_things[5] = {
-	"first of three default things",
-	"second of three default things",
-	"third of three default things"
-};
+static bool flag = false;
+static char message[4096] = "";
+static int ints[4096];
+static size_t length;
 
-int num_things = 3;
+static void about();
+static void help(int ret);
+static void print_ints();
+
+static void help_flag();
+static void init();
+
+int main(int argc, char **argv) {
+	name = argv[0];
+	init();
+
+	int ret = LCa_read(argc, argv);
+	if(ret != LCA_OK) help(1);
+
+	if(flag) printf("The flag was set!\n\n");
+	if(message[0]) printf("Message: %s\n\n", message);
+
+	if(length) print_ints();
+	exit(0);
+}
 
 static void about() {
 	printf("  libClame: Command-line Arguments Made Easy\n");
@@ -54,65 +70,79 @@ static void about() {
 	exit(0);
 }
 
-static void help() {
+static void help(int ret) {
 	printf("Usage: %s [OPTIONS]\n\n", name);
 
 	printf("Valid options are:\n");
-	printf("-message MESSAGE: set the message to MESSAGE.\n");
-	printf("-two-things THINGA THINGB: set the two things to THINGA and "
-		"THINGB.\n");
-	printf("-some-things THINGA THINGB ... --: set some things, between "
-		"three and five arguments.\n\n");
+	printf("  -a, --about		print the about dialogue\n");
+	printf("  -h, --help		print this help dialogue\n\n");
+
+	printf("  -f, --flag		set the flag\n");
+	printf("  -m, --message MESSAGE	set the message to MESSAGE\n");
+	printf("  -i, --ints INTS...	set the ints to INTS\n");
 
 	printf("Happy coding! :)\n");
+	exit(ret);
 }
 
-int main(int argc, char **argv) {
-	name = argv[0];
+static void print_ints() {
+	printf("Ints: ");
 
-	// Note: For brevity, I'm not checking for null-pointers issued in case
-	// of malloc failing. Although, I don't think this will be necessary
-	// for the vast majority of people, you may still want to do it.
+	for(size_t i = 0; i < length; i++) {
+		printf("%d", ints[i]);
 
-	LC_entry_t *entry = LC_new_entry();
-	entry -> instr = "-about";
-	entry -> func = about;
-
-	entry = LC_new_entry();
-	entry -> instr = "-help";
-	entry -> func = help;
-
-	entry = LC_new_entry();
-	entry -> instr = "-message";
-	entry -> data = &message;
-
-	entry = LC_new_entry();
-	entry -> instr = "-two-things";
-	entry -> data = two_things;
-	entry -> array_min = 2;
-	entry -> array_max = 2;
-
-	entry = LC_new_entry();
-	entry -> instr = "-some-things";
-	entry -> data = some_things;
-	entry -> array_min = 3;
-	entry -> array_max = 5;
-	entry -> array_len = &num_things;
-
-	int ret = LC_parse(argc, argv);
-
-	if(ret != LC_OK) {
-		help();
-		exit(1);
+		if(i + 1 != length) printf(", ");
 	}
 
-	printf("Message: %s\n\n", message);
-	printf("Two Things: %s\n%s\n\n", two_things[0], two_things[1]);
+	printf("\n");
+}
 
-	for(int i = 0; i < num_things; i++) {
-		printf("Thing %d of %d Things: %s\n",
-			i, num_things, some_things[i]);
-	}
+static void help_flag() {
+	help(0);
+}
 
-	exit(0);
+static void init() {
+	LCa_t *arg = LCa_new();
+	arg -> long_flag = "about";
+	arg -> short_flag = 'a';
+	arg -> pre = about;
+
+	arg = LCa_new();
+	arg -> long_flag = "help";
+	arg -> short_flag = 'h';
+	arg -> pre = help_flag;
+
+	LCv_t *var = LCv_new();
+	var -> id = "flag";
+	var -> data = &flag;
+
+	arg = LCa_new();
+	arg -> long_flag = "flag";
+	arg -> short_flag = 'f';
+	arg -> var = var;
+	arg -> value = true;
+
+	var = LCv_new();
+	var -> id = "message";
+	var -> fmt = "%4095[^\t\n]";
+	var -> data = message;
+
+	arg = LCa_new();
+	arg -> long_flag = "message";
+	arg -> short_flag = 'm';
+	arg -> var = var;
+
+	var = LCv_new();
+	var -> id = "ints";
+	var -> fmt = "%d";
+	var -> data = ints;
+	var -> len = &length;
+	var -> min_len = 0;
+	var -> max_len = 4096;
+	var -> size = sizeof(int);
+
+	arg = LCa_new();
+	arg -> long_flag = "ints";
+	arg -> short_flag = 'i';
+	arg -> var = var;
 }
