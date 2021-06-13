@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libClame/args.h>
-#include <libClame/vars.h>
+#include <LC_args.h>
+#include <LC_vars.h>
 
 LCa_t *LC_args;
 

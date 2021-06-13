@@ -19,8 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <libClame/args.h>
-#include <libClame/vars.h>
+#include <LC_args.h>
+#include <LC_vars.h>
 
 static const char *name;
 
@@ -43,50 +43,53 @@ int main(int argc, char **argv) {
 	int ret = LCa_read(argc, argv);
 	if(ret != LCA_OK) help(1);
 
-	if(flag) printf("The flag was set!\n\n");
-	if(message[0]) printf("Message: %s\n\n", message);
+	putchar('\n');
+	if(flag) puts("  The flag was set!\n");
+	if(message[0]) printf("  Message: %s\n\n", message);
 
 	if(length) print_ints();
 	exit(0);
 }
 
 static void about() {
-	printf("  libClame: Command-line Arguments Made Easy\n");
-	printf("  Copyright (C) 2021 Jyothiraditya Nellakra\n\n");
+	putchar('\n');
+	puts("  libClame: Command-line Arguments Made Easy");
+	puts("  Copyright (C) 2021 Jyothiraditya Nellakra\n");
 
-	printf("  This program is free software: you can redistribute it and/or modify\n");
-	printf("  it under the terms of the GNU General Public License as published by\n");
-	printf("  the Free Software Foundation, either version 3 of the License, or\n");
-	printf("  (at your option) any later version.\n\n");
+	puts("  This program is free software: you can redistribute it and/or modify");
+	puts("  it under the terms of the GNU General Public License as published by");
+	puts("  the Free Software Foundation, either version 3 of the License, or");
+	puts("  (at your option) any later version.\n");
 
-	printf("  This program is distributed in the hope that it will be useful,\n");
-	printf("  but WITHOUT ANY WARRANTY; without even the implied warranty of\n");
-	printf("  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the\n");
-	printf("  GNU General Public License for more details.\n\n");
+	puts("  This program is distributed in the hope that it will be useful,");
+	puts("  but WITHOUT ANY WARRANTY; without even the implied warranty of");
+	puts("  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the");
+	puts("  GNU General Public License for more details.\n");
 
-	printf("  You should have received a copy of the GNU General Public License\n");
-	printf("  along with this program. If not, see <https://www.gnu.org/licenses/>.\n\n");
+	puts("  You should have received a copy of the GNU General Public License");
+	puts("  along with this program. If not, see <https://www.gnu.org/licenses/>.\n");
 
 	exit(0);
 }
 
 static void help(int ret) {
-	printf("Usage: %s [OPTIONS]\n\n", name);
+	putchar('\n');
+	printf("  Usage: %s [OPTIONS]\n\n", name);
 
-	printf("Valid options are:\n");
-	printf("  -a, --about		print the about dialogue\n");
-	printf("  -h, --help		print this help dialogue\n\n");
+	puts("  Valid options are:");
+	puts("    -a, --about		print the about dialogue");
+	puts("    -h, --help		print this help dialogue\n");
 
-	printf("  -f, --flag		set the flag\n");
-	printf("  -m, --message MESSAGE	set the message to MESSAGE\n");
-	printf("  -i, --ints INTS...	set the ints to INTS\n");
+	puts("    -f, --flag		set the flag");
+	puts("    -m, --message MESSAGE	set the message to MESSAGE");
+	puts("    -i, --ints INTS...	set the ints to INTS\n");
 
-	printf("Happy coding! :)\n");
+	puts("  Happy coding! :)\n");
 	exit(ret);
 }
 
 static void print_ints() {
-	printf("Ints: ");
+	printf("  Ints: ");
 
 	for(size_t i = 0; i < length; i++) {
 		printf("%d", ints[i]);
@@ -94,7 +97,7 @@ static void print_ints() {
 		if(i + 1 != length) printf(", ");
 	}
 
-	printf("\n");
+	puts("\n");
 }
 
 static void help_flag() {

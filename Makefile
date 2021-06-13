@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
-headers = $(wildcard include/*.h)
-objs = $(patsubst %.c,%.o,$(wildcard source/*.c))
+headers = $(wildcard inc/*.h)
+objs = $(patsubst %.c,%.o,$(wildcard src/*.c))
 
 demos = $(patsubst demo/%.c,%,$(wildcard demo/*.c))
 objs += $(patsubst %.c,%.o,$(wildcard demo/*.c))
@@ -26,7 +26,7 @@ files += $(wildcard *.a)
 
 CLEAN = $(foreach file,$(files),rm $(file);)
 
-CFLAGS ?= -std=gnu17 -Wall -Wextra -Werror -O3 -I include/
+CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O3 -I inc/
 LD_LIBS ?= -L. -lClame
 
 $(objs) : %.o : %.c $(headers)

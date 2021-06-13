@@ -15,30 +15,30 @@
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
 #include <stdbool.h>
-#include <stddef.h>
+#include <LC_vars.h>
 
-#ifndef LC_VARS_H
-#define LC_VARS_H 1
+#ifndef LC_ARGS_H
+#define LC_ARGS_H 1
 
-typedef struct LCv_s {
-	struct LCv_s *next;
+typedef struct LCa_s {
+	struct LCa_s *next;
+	const char *long_flag;
+	char short_flag;
 
-	const char *id;
-	const char *fmt;
-	void *data;
+	void (*pre)(void);
+	void (*post)(void);
 
-	size_t *len;
-	size_t min_len;
-	size_t max_len;
-        size_t size;
+	LCv_t *var;
+	bool value;
 
-	bool dirty;
+} LCa_t;
 
-} LCv_t;
+extern LCa_t *LC_args;
 
-extern LCv_t *LC_vars;
+extern LCa_t *LCa_new();
+extern int LCa_read(int argc, char **argv);
 
-extern LCv_t *LCv_new();
-extern LCv_t *LCv_get(const char *id);
+#define LCA_OK 0
+#define LCA_BAD_CMD 1
 
 #endif

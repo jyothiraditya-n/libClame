@@ -16,40 +16,29 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include <libClame/vars.h>
+#ifndef LC_VARS_H
+#define LC_VARS_H 1
 
-LCv_t *LC_vars;
+typedef struct LCv_s {
+	struct LCv_s *next;
 
-LCv_t *LCv_new() {
-	LCv_t *new = malloc(sizeof(LCv_t));
-	if(!new) return NULL;
+	const char *id;
+	const char *fmt;
+	void *data;
 
-	new -> next = LC_vars;
-	new -> id = "";
-	new -> fmt = "";
-	new -> data = NULL;
+	size_t *len;
+	size_t min_len;
+	size_t max_len;
+	size_t size;
 
-	new -> len = NULL;
-	new -> min_len = 0;
-	new -> max_len = 0;
-	new -> size = 0;
+	bool dirty;
 
-	new -> dirty = false;
+} LCv_t;
 
-	LC_vars = new;
-	return LC_vars;
-}
+extern LCv_t *LC_vars;
 
-LCv_t *LCv_get(const char *id) {
-	LCv_t *var = LC_vars;
+extern LCv_t *LCv_new();
+extern LCv_t *LCv_get(const char *id);
 
-	while(var) {
-		if(!strcmp(var -> id, id)) break;
-		else var = var -> next;
-	}
-
-	return var;
-}
+#endif

@@ -15,30 +15,41 @@
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
 #include <stdbool.h>
-#include <libClame/vars.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
-#ifndef LC_ARGS_H
-#define LC_ARGS_H 1
+#include <LC_vars.h>
 
-typedef struct LCa_s {
-	struct LCa_s *next;
-	const char *long_flag;
-	char short_flag;
+LCv_t *LC_vars;
 
-	void (*pre)(void);
-	void (*post)(void);
+LCv_t *LCv_new() {
+	LCv_t *new = malloc(sizeof(LCv_t));
+	if(!new) return NULL;
 
-	LCv_t *var;
-	bool value;
+	new -> next = LC_vars;
+	new -> id = "";
+	new -> fmt = "";
+	new -> data = NULL;
 
-} LCa_t;
+	new -> len = NULL;
+	new -> min_len = 0;
+	new -> max_len = 0;
+	new -> size = 0;
 
-extern LCa_t *LC_args;
+	new -> dirty = false;
 
-extern LCa_t *LCa_new();
-extern int LCa_read(int argc, char **argv);
+	LC_vars = new;
+	return LC_vars;
+}
 
-#define LCA_OK 0
-#define LCA_BAD_CMD 1
+LCv_t *LCv_get(const char *id) {
+	LCv_t *var = LC_vars;
 
-#endif
+	while(var) {
+		if(!strcmp(var -> id, id)) break;
+		else var = var -> next;
+	}
+
+	return var;
+}
