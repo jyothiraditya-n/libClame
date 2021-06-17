@@ -14,6 +14,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stddef.h>
 
@@ -26,10 +27,13 @@ typedef struct {
 
 } LCl_t;
 
+extern bool LCl_sigint;
+
 extern int LCl_read(FILE *file, LCl_t *line);
 
 #define LCL_OK 0
 #define LCL_TOO_LONG 1
 #define LCL_EOF 2
+#define LCL_SIGINT 3
 
 #endif

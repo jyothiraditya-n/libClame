@@ -15,20 +15,29 @@
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 
 #include <LC_lines.h>
 
+bool LCl_sigint;
+
 int LCl_read(FILE *file, LCl_t *line) {
 	int c = ' ';
-	
+	size_t i = 0;
+
+	LCl_sigint = false;
+
 	while(c != '\n' && isspace(c)) {
 		if(feof(file)) return LCL_EOF;
 		c = fgetc(file);
+		
+		if(LCl_sigint) {
+			line -> data[i] = 0;
+			return LCL_SIGINT;
+		}
 	}
-
-	size_t i = 0;
 
 	while(c != '\n') {
 		if(i >= line -> length) return LCL_TOO_LONG;
@@ -38,6 +47,11 @@ int LCl_read(FILE *file, LCl_t *line) {
 
 		if(feof(file)) return LCL_EOF;
 		c = fgetc(file);
+		
+		if(LCl_sigint) {
+			line -> data[i] = 0;
+			return LCL_SIGINT;
+		}
 	}
 
 	line -> data[i] = 0;
