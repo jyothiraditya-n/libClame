@@ -14,34 +14,22 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
-#include <stdbool.h>
+#include <stdio.h>
 #include <stddef.h>
-#include <LC_vars.h>
 
-#ifndef LC_ARGS_H
-#define LC_ARGS_H 1
+#ifndef LC_LINES_H
+#define LC_LINES_H
 
-typedef struct LCa_s {
-	struct LCa_s *next;
-	const char *long_flag;
-	char short_flag;
+typedef struct {
+        char *data;
+        size_t length;
 
-	void (*pre)(void);
-	void (*post)(void);
+} LCl_t;
 
-	LCv_t *var;
-	bool value;
+extern int LCl_read(FILE *file, LCl_t *line);
 
-} LCa_t;
-
-extern LCa_t *LC_args;
-extern const char **LCa_noflags;
-extern size_t LCa_max_noflags;
-
-extern LCa_t *LCa_new();
-extern int LCa_read(int argc, char **argv);
-
-#define LCA_OK 0
-#define LCA_BAD_CMD 1
+#define LCL_OK 0
+#define LCL_TOO_LONG 1
+#define LCL_EOF 2
 
 #endif

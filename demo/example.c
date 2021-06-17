@@ -18,8 +18,10 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <LC_args.h>
+#include <LC_lines.h>
 #include <LC_vars.h>
 
 static const char *name;
@@ -29,9 +31,12 @@ static char message[4096] = "";
 static int ints[4096];
 static size_t length;
 
+static const char *files[4096];
+
 static void about();
 static void help(int ret);
 static void print_ints();
+static void print_files();
 
 static void help_flag();
 static void init();
@@ -45,9 +50,33 @@ int main(int argc, char **argv) {
 
 	putchar('\n');
 	if(flag) puts("  The flag was set!\n");
-	if(message[0]) printf("  Message: %s\n\n", message);
+	else puts("  The flag wasn't set.\n");
 
+	if(message[0]) printf("  Message: %s\n\n", message);
 	if(length) print_ints();
+	if(files[0]) print_files();
+
+	LCl_t line;
+	line.data = message;
+	line.length = 4095;
+
+	while(true) {
+		printf("Type a message! > ");
+		ret = LCl_read(stdin, &line);
+
+		if(ret == LCL_TOO_LONG) fprintf(stderr, "%s: error: input too "
+			"long\n", name);
+
+		else if(ret == LCL_EOF) exit(0);
+
+		else if(ret != LCL_OK) {
+			fprintf(stderr, "%s: unknown error.\n", name);
+			exit(1);
+		}
+
+		if(strlen(message)) printf("  You typed: %s\n", message);
+	}
+
 	exit(0);
 }
 
@@ -74,7 +103,7 @@ static void about() {
 
 static void help(int ret) {
 	putchar('\n');
-	printf("  Usage: %s [OPTIONS]\n\n", name);
+	printf("  Usage: %s [OPTIONS] (--) [FILES]\n\n", name);
 
 	puts("  Valid options are:");
 	puts("    -a, --about		print the about dialogue");
@@ -83,6 +112,12 @@ static void help(int ret) {
 	puts("    -f, --flag		set the flag");
 	puts("    -m, --message MESSAGE	set the message to MESSAGE");
 	puts("    -i, --ints INTS...	set the ints to INTS\n");
+
+	puts("  Note: '--' signifies the end of the options. Any options ");
+	puts("        found after it will be treated as filenames.\n");
+
+	puts("  Note: After INTS, you will need two '--'s, as the first '--'");
+	puts("        will only signal the end of the INTS.\n");
 
 	puts("  Happy coding! :)\n");
 	exit(ret);
@@ -94,10 +129,19 @@ static void print_ints() {
 	for(size_t i = 0; i < length; i++) {
 		printf("%d", ints[i]);
 
-		if(i + 1 != length) printf(", ");
+		if(i + 1 < length) printf(", ");
 	}
 
 	puts("\n");
+}
+
+static void print_files() {
+	for(size_t i = 0; i < 4096; i++) {
+		if(files[i]) printf("  File: %s\n", files[i]);
+		else break;
+	}
+
+	putchar('\n');
 }
 
 static void help_flag() {
@@ -148,4 +192,7 @@ static void init() {
 	arg -> long_flag = "ints";
 	arg -> short_flag = 'i';
 	arg -> var = var;
+
+	LCa_noflags = files;
+	LCa_max_noflags = 4096;
 }

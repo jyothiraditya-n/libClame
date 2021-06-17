@@ -23,10 +23,13 @@
 #include <LC_vars.h>
 
 LCa_t *LC_args;
+const char **LCa_noflags;
+size_t LCa_max_noflags;
 
 static int proc_cmd();
 
 static int proc_lflag();
+static int proc_noflag();
 static int proc_sflag(char c);
 
 static int proc_arg(LCa_t *arg);
@@ -39,6 +42,8 @@ static int ac;
 static char **av;
 static int ai;
 static size_t aj;
+
+static size_t noflags;
 
 LCa_t *LCa_new() {
 	LCa_t *new = malloc(sizeof(LCa_t));
@@ -61,9 +66,16 @@ int LCa_read(int argc, char **argv) {
 	ac = argc;
 	av = argv;
 
+	bool no_more_flags = false;
+
 	for(ai = 1; ai < argc; ai++) {
-	       int ret = proc_cmd();
-	       if(ret != LCA_OK) return ret;
+		if(!no_more_flags && !strcmp(av[ai], "--")) {
+			no_more_flags = true;
+			continue;
+		}
+
+		int ret = no_more_flags ? proc_noflag() : proc_cmd();
+		if(ret != LCA_OK) return ret;
 	}
 
 	return LCA_OK;
@@ -72,7 +84,9 @@ int LCa_read(int argc, char **argv) {
 static int proc_cmd() {
 	size_t len = strlen(av[ai]);
 
-	if(len < 2 || av[ai][0] != '-') {
+	if(av[ai][0] != '-') {
+		if(LCa_noflags) return proc_noflag();
+
 		fprintf(stderr, "%s: error: "
 			"'%s' is not a command.\n",
 			av[0], av[ai]);
@@ -108,6 +122,18 @@ static int proc_lflag() {
 	}
 
 	return proc_arg(arg);
+}
+
+static int proc_noflag() {
+	if(noflags < LCa_max_noflags) {
+		LCa_noflags[noflags] = av[ai];
+		noflags++;
+
+		return LCA_OK;
+	}
+
+	fprintf(stderr, "%s: error: too many arguments.\n", av[0]);
+	return LCA_BAD_CMD;
 }
 
 static int proc_sflag(char c) {
@@ -193,8 +219,15 @@ static int get_arr(LCv_t *var) {
 
 	size_t len = k - ai;
 
-	if(len < var -> min_len) return LCA_BAD_CMD;
-	if(len > var -> max_len) return LCA_BAD_CMD;
+	if(len < var -> min_len) {
+		fprintf(stderr, "%s: error: too few arguments.\n", av[0]);
+		return LCA_BAD_CMD;
+	}
+
+	if(len > var -> max_len) {
+		fprintf(stderr, "%s: error: too few arguments.\n", av[0]);
+		return LCA_BAD_CMD;
+	}
 
 	*var -> len = len;
 

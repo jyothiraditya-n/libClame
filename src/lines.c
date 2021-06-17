@@ -14,34 +14,32 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
-#include <stdbool.h>
+#include <ctype.h>
 #include <stddef.h>
-#include <LC_vars.h>
+#include <stdio.h>
 
-#ifndef LC_ARGS_H
-#define LC_ARGS_H 1
+#include <LC_lines.h>
 
-typedef struct LCa_s {
-	struct LCa_s *next;
-	const char *long_flag;
-	char short_flag;
+int LCl_read(FILE *file, LCl_t *line) {
+	int c = ' ';
+	
+	while(c != '\n' && isspace(c)) {
+		if(feof(file)) return LCL_EOF;
+		c = fgetc(file);
+	}
 
-	void (*pre)(void);
-	void (*post)(void);
+	size_t i = 0;
 
-	LCv_t *var;
-	bool value;
+	while(c != '\n') {
+		if(i >= line -> length) return LCL_TOO_LONG;
 
-} LCa_t;
+		line -> data[i] = (char) c;
+		i++;
 
-extern LCa_t *LC_args;
-extern const char **LCa_noflags;
-extern size_t LCa_max_noflags;
+		if(feof(file)) return LCL_EOF;
+		c = fgetc(file);
+	}
 
-extern LCa_t *LCa_new();
-extern int LCa_read(int argc, char **argv);
-
-#define LCA_OK 0
-#define LCA_BAD_CMD 1
-
-#endif
+	line -> data[i] = 0;
+	return LCL_OK;
+}
