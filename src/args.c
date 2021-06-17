@@ -117,7 +117,7 @@ static int proc_lflag() {
 
 static int proc_noflag() {
 	if(!LCa_noflags) {
-		fprintf(stderr, "%s: error: argument '%s' does not have a "
+		fprintf(stderr, "%s: error: argument '%s' does not have the "
 			"correct preceding flag.\n", av[0], av[ai]);
 
 		return LCA_BAD_CMD;
