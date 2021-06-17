@@ -84,16 +84,7 @@ int LCa_read(int argc, char **argv) {
 static int proc_cmd() {
 	size_t len = strlen(av[ai]);
 
-	if(av[ai][0] != '-') {
-		if(LCa_noflags) return proc_noflag();
-
-		fprintf(stderr, "%s: error: "
-			"'%s' is not a command.\n",
-			av[0], av[ai]);
-
-		return LCA_BAD_CMD;
-	}
-
+	if(av[ai][0] != '-') return proc_noflag();
 	if(av[ai][1] == '-') return proc_lflag();
 
 	int i = ai;
@@ -125,6 +116,13 @@ static int proc_lflag() {
 }
 
 static int proc_noflag() {
+	if(!LCa_noflags) {
+		fprintf(stderr, "%s: error: argument '%s' does not have a "
+			"correct preceding flag.\n", av[0], av[ai]);
+
+		return LCA_BAD_CMD;
+	}
+
 	if(noflags < LCa_max_noflags) {
 		LCa_noflags[noflags] = av[ai];
 		noflags++;
@@ -144,7 +142,7 @@ static int proc_sflag(char c) {
 
 	if(!arg) {
 		fprintf(stderr, "%s: error: "
-			"unknown command '%c'.\n",
+			"unknown flag '%c'.\n",
 			av[0], c);
 
 		return LCA_BAD_CMD;
