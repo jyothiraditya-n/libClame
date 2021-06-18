@@ -29,11 +29,12 @@ typedef struct {
 
 extern bool LCl_sigint;
 
-extern int LCl_read(FILE *file, LCl_t *line);
+extern int LCl_fread(FILE *file, LCl_t *line);
+extern int LCl_read(LCl_t *line);
 
 #define LCL_OK 0
-#define LCL_TOO_LONG 1
+#define LCL_CLIPPED 1
 #define LCL_EOF 2
-#define LCL_SIGINT 3
+#define LCL_SIGINT 4
 
 #endif

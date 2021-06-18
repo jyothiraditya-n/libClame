@@ -58,16 +58,19 @@ int main(int argc, char **argv) {
 
 	LCl_t line;
 	line.data = message;
-	line.length = 4095;
+	line.length = 4096;
 
 	while(true) {
 		printf("Type a message! > ");
-		ret = LCl_read(stdin, &line);
+		ret = LCl_read(&line);
 
-		if(ret == LCL_TOO_LONG) fprintf(stderr, "%s: error: input too "
+		if(ret & LCL_EOF) {
+			puts("^D");
+			exit(0);
+		}
+
+		if(ret & LCL_CLIPPED) fprintf(stderr, "%s: error: input too "
 			"long\n", name);
-
-		else if(ret == LCL_EOF) exit(0);
 
 		else if(ret != LCL_OK) {
 			fprintf(stderr, "%s: unknown error.\n", name);

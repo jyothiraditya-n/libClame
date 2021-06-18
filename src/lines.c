@@ -23,37 +23,83 @@
 
 bool LCl_sigint;
 
-int LCl_read(FILE *file, LCl_t *line) {
+int LCl_fread(FILE *file, LCl_t *line) {
 	int c = ' ';
 	size_t i = 0;
+	bool clipped = false;
 
-	LCl_sigint = false;
+	*line -> data = 0;
+
+	if(feof(file)) return LCL_EOF;
 
 	while(c != '\n' && isspace(c)) {
-		if(feof(file)) return LCL_EOF;
 		c = fgetc(file);
-		
-		if(LCl_sigint) {
-			line -> data[i] = 0;
-			return LCL_SIGINT;
-		}
+		if(feof(file)) return LCL_EOF;
 	}
 
 	while(c != '\n') {
-		if(i >= line -> length) return LCL_TOO_LONG;
+		if(i + 1>= line -> length) {
+			clipped = true;
+			break;
+		};
 
 		line -> data[i] = (char) c;
+		line -> data[i + 1] = 0;
 		i++;
 
-		if(feof(file)) return LCL_EOF;
 		c = fgetc(file);
-		
-		if(LCl_sigint) {
-			line -> data[i] = 0;
-			return LCL_SIGINT;
-		}
+		if(feof(file)) return LCL_EOF;
 	}
 
-	line -> data[i] = 0;
-	return LCL_OK;
+	if(!clipped) return LCL_OK;
+
+	while(c != '\n') {
+		c = fgetc(file);
+		if(feof(file)) return LCL_EOF & LCL_CLIPPED;
+	}
+
+	return LCL_CLIPPED;
+}
+
+int LCl_read(LCl_t *line) {
+	int c = ' ';
+	size_t i = 0;
+	bool clipped = false;
+
+	LCl_sigint = false;
+	*line -> data = 0;
+
+	if(feof(stdin)) return LCL_EOF;
+	if(LCl_sigint) return LCL_SIGINT;
+
+	while(c != '\n' && isspace(c)) {
+		c = fgetc(stdin);
+		if(feof(stdin)) return LCL_EOF;
+		if(LCl_sigint) return LCL_SIGINT;
+	}
+
+	while(c != '\n') {
+		if(i + 1>= line -> length) {
+			clipped = true;
+			break;
+		};
+
+		line -> data[i] = (char) c;
+		line -> data[i + 1] = 0;
+		i++;
+
+		c = fgetc(stdin);
+		if(feof(stdin)) return LCL_EOF;
+		if(LCl_sigint) return LCL_SIGINT;
+	}
+
+	if(!clipped) return LCL_OK;
+
+	while(c != '\n') {
+		c = fgetc(stdin);
+		if(feof(stdin)) return LCL_EOF & LCL_CLIPPED;
+		if(LCl_sigint) return LCL_SIGINT & LCL_CLIPPED;
+	}
+
+	return LCL_CLIPPED;
 }
