@@ -64,20 +64,32 @@ int main(int argc, char **argv) {
 		printf("Type a message! > ");
 		ret = LCl_read(&line);
 
-		if(ret & LCL_EOF) {
+		switch(ret) {
+		case LCL_OK:
+			if(strlen(message))
+				printf("  You typed: %s\n", message);
+
+			continue;
+
+		case LCL_CUT:
+			fprintf(stderr, "%s: error: input too long\n", name);
+			continue;
+
+		case LCL_EOF:
 			puts("^D");
 			exit(0);
-		}
 
-		if(ret & LCL_CLIPPED) fprintf(stderr, "%s: error: input too "
-			"long\n", name);
+		case LCL_CUT_EOF:
+			fprintf(stderr, "%s: error: input too long\n", name);
+			puts("^D");
+			exit(1);
 
-		else if(ret != LCL_OK) {
-			fprintf(stderr, "%s: unknown error.\n", name);
+		default:
+			fprintf(stderr, "%s: error: unknown error\n", name);
+			perror("cstdlib");
 			exit(1);
 		}
-
-		if(strlen(message)) printf("  You typed: %s\n", message);
+		
 	}
 
 	exit(0);

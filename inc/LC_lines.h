@@ -33,8 +33,10 @@ extern int LCl_fread(FILE *file, LCl_t *line);
 extern int LCl_read(LCl_t *line);
 
 #define LCL_OK 0
-#define LCL_CLIPPED 1
+#define LCL_CUT 1
 #define LCL_EOF 2
-#define LCL_SIGINT 4
+#define LCL_INT 3
+#define LCL_CUT_EOF 4
+#define LCL_CUT_INT 5
 
 #endif
