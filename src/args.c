@@ -83,6 +83,8 @@ int LCa_read(int argc, char **argv) {
 
 static int proc_cmd() {
 	size_t len = strlen(av[ai]);
+	
+	if(!strcmp(av[ai], "-")) return proc_noflag();
 
 	if(av[ai][0] != '-') return proc_noflag();
 	if(av[ai][1] == '-') return proc_lflag();

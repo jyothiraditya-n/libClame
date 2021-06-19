@@ -118,21 +118,22 @@ static void about() {
 
 static void help(int ret) {
 	putchar('\n');
-	printf("  Usage: %s [OPTIONS] (--) [FILES]\n\n", name);
+	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", name);
 
 	puts("  Valid options are:");
-	puts("    -a, --about		print the about dialogue");
-	puts("    -h, --help		print this help dialogue\n");
+	puts("    -a, --about             print the about dialogue");
+	puts("    -h, --help              print this help dialogue\n");
 
-	puts("    -f, --flag		set the flag");
-	puts("    -m, --message MESSAGE	set the message to MESSAGE");
-	puts("    -i, --ints INTS...	set the ints to INTS\n");
+	puts("    -f, --flag              set the flag");
+	puts("    -m, --message MESSAGE   set the message to MESSAGE");
+	puts("    -i, --ints INTS... [--] set the ints to INTS\n");
 
-	puts("  Note: '--' signifies the end of the options. Any options ");
-	puts("        found after it will be treated as filenames.\n");
+	puts("  Note: A '--' before [FILES] signifies the end of the options. Any");
+	puts("        options found after it will be treated as filenames.\n");
 
-	puts("  Note: After INTS, you will need two '--'s, as the first '--'");
-	puts("        will only signal the end of the INTS.\n");
+	puts("  Note: After INTS, you will need two '--'s, as the optional '--'");
+	puts("        directly after INTS only signals the end of the INTS and");
+	puts("        not the end of the options.\n");
 
 	puts("  Happy coding! :)\n");
 	exit(ret);
