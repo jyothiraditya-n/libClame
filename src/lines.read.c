@@ -85,9 +85,10 @@ static int _next() {
 
 static int reset(int ret) {
 	int ret2 = tcsetattr(STDIN_FILENO, TCSANOW, &cooked);
-	
 	if(ret2 == -1) return LCL_ERR;
-	else return ret;
+
+	if(ret == LCL_INT || ret == LCL_CUT_INT) puts("^C");
+	return ret;
 }
 
 static int setij() {
@@ -162,7 +163,7 @@ int LCl_read(LCl_t *line) {
 
 	while(c != '\n') {
 		c = next();
-		if(LCl_sigint) return reset(LCL_INT & LCL_CUT_INT);
+		if(LCl_sigint) return reset(LCL_CUT_INT);
 	}
 
 	return reset(LCL_CUT);
