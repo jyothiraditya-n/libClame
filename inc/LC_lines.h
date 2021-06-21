@@ -32,6 +32,7 @@ extern bool LCl_sigint;
 extern int LCl_fread(FILE *file, LCl_t *line);
 extern int LCl_read(LCl_t *line);
 
+#define LCL_ERR -1
 #define LCL_OK 0
 #define LCL_CUT 1
 #define LCL_EOF 2

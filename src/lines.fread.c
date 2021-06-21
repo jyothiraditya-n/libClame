@@ -21,8 +21,6 @@
 
 #include <LC_lines.h>
 
-bool LCl_sigint;
-
 int LCl_fread(FILE *file, LCl_t *line) {
 	int c = ' ';
 	size_t i = 0;
@@ -38,7 +36,7 @@ int LCl_fread(FILE *file, LCl_t *line) {
 	}
 
 	while(c != '\n') {
-		if(i + 1>= line -> length) {
+		if(i + 1 >= line -> length) {
 			clipped = true;
 			break;
 		};
@@ -56,49 +54,6 @@ int LCl_fread(FILE *file, LCl_t *line) {
 	while(c != '\n') {
 		c = fgetc(file);
 		if(feof(file)) return LCL_CUT_EOF;
-	}
-
-	return LCL_CUT;
-}
-
-int LCl_read(LCl_t *line) {
-	int c = ' ';
-	size_t i = 0;
-	bool clipped = false;
-
-	LCl_sigint = false;
-	*line -> data = 0;
-
-	if(feof(stdin)) return LCL_EOF;
-	if(LCl_sigint) return LCL_INT;
-
-	while(c != '\n' && isspace(c)) {
-		c = fgetc(stdin);
-		if(feof(stdin)) return LCL_EOF;
-		if(LCl_sigint) return LCL_INT;
-	}
-
-	while(c != '\n') {
-		if(i + 1>= line -> length) {
-			clipped = true;
-			break;
-		};
-
-		line -> data[i] = (char) c;
-		line -> data[i + 1] = 0;
-		i++;
-
-		c = fgetc(stdin);
-		if(feof(stdin)) return LCL_EOF;
-		if(LCl_sigint) return LCL_INT;
-	}
-
-	if(!clipped) return LCL_OK;
-
-	while(c != '\n') {
-		c = fgetc(stdin);
-		if(feof(stdin)) return LCL_CUT_EOF;
-		if(LCl_sigint) return LCL_INT & LCL_CUT_INT;
 	}
 
 	return LCL_CUT;
