@@ -75,15 +75,6 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "%s: error: input too long\n", name);
 			continue;
 
-		case LCL_EOF:
-			puts("^D");
-			exit(0);
-
-		case LCL_CUT_EOF:
-			fprintf(stderr, "%s: error: input too long\n", name);
-			puts("^D");
-			exit(1);
-
 		default:
 			fprintf(stderr, "%s: error: unknown error\n", name);
 			perror("cstdlib");
