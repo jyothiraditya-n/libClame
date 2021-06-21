@@ -79,9 +79,11 @@ int LCl_read(LCl_t *line) {
 
 	ret = LCL_OK;
 	finished = false;
+	LCl_sigint = false;
 
 	while(ret == LCL_OK && !finished) {
 		if(total_chars >= length - 1) return cleanup(LCL_ERR);
+		if(LCL_sigint) return LCL_INT;
 		else ret = readch();
 	}
 
@@ -116,7 +118,7 @@ static int cleanup(int ret) {
 
 	data[a] = 0;
 
-	if(ret == LCL_INT || ret == LCL_CUT_INT) puts("^C");
+	if(ret == LCL_INT) puts("^C");
 	return ret;
 }
 
@@ -184,6 +186,7 @@ static int putch(char ch) {
 
 static int readch() {
 	char input = getchar();
+	if(LCL_sigint) return LCL_Ok;
 
 	switch(input) {
 	case '\e':
