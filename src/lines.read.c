@@ -45,8 +45,16 @@ static int reset();
 static int setij();
 
 static int next() {
+	if(LCl_sigint) return 0;
+	
 	int input = _next();
-	while(!input) input = _next();
+	if(LCl_sigint) return 0;
+
+	while(!input) {
+		input = _next();
+		if(LCl_sigint) return 0;
+	}
+
 	return input;
 }
 
@@ -56,7 +64,7 @@ static int _next() {
 
 	unsigned char input = getchar();
 	if(LCl_sigint) return 0;
-	
+
 	int ret;
 
 	switch(input) {
