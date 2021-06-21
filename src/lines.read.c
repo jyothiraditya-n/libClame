@@ -83,7 +83,6 @@ int LCl_read(LCl_t *line) {
 
 	while(ret == LCL_OK && !finished) {
 		if(total_chars >= length - 1) return cleanup(LCL_ERR);
-		if(LCL_sigint) return LCL_INT;
 		else ret = readch();
 	}
 
@@ -186,7 +185,7 @@ static int putch(char ch) {
 
 static int readch() {
 	char input = getchar();
-	if(LCL_sigint) return LCL_Ok;
+	if(LCL_sigint) return LCL_INT;
 
 	switch(input) {
 	case '\e':
