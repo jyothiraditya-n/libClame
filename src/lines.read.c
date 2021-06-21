@@ -185,7 +185,7 @@ static int putch(char ch) {
 
 static int readch() {
 	char input = getchar();
-	if(LCL_sigint) return LCL_INT;
+	if(LCl_sigint) return LCL_INT;
 
 	switch(input) {
 	case '\e':

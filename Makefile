@@ -26,7 +26,7 @@ files += $(wildcard *.a)
 
 CLEAN = $(foreach file,$(files),rm $(file);)
 
-CFLAGS ?= -std=c99 -Wall -Wextra -O3 -I inc/
+CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O3 -I inc/
 LD_LIBS ?= -L. -lClame
 
 $(objs) : %.o : %.c $(headers)
