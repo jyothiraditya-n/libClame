@@ -37,12 +37,13 @@ static bool finished;
 static int home_i, home_j;
 static int i, j;
 
-static int backspace();
 static int cleanup();
-static int refresh();
 static int setij();
 
-static int cursor(char ch);
+static int refresh_noch();
+static int refresh_postch();
+
+static int escape_code(char ch);
 static int putch(char ch);
 static int readch();
 
@@ -87,21 +88,6 @@ int LCl_read(LCl_t *line) {
 	return cleanup(ret);
 }
 
-static int backspace() {
-	printf("\e[%d;%dH\e[J", home_i, home_j);
-
-	for(size_t a = 0; a < insertion_point; a++)
-		putchar(data[a]);
-
-	printf("\e[s\e[?25l%s", &data[insertion_point]);
-
-	int ret = setij();
-	if(ret != LCL_OK) return ret;
-
-	printf("\e[u\e[?25h");
-	return LCL_OK;
-}
-
 static int cleanup(int ret) {
 	int ret2 = tcsetattr(STDIN_FILENO, TCSANOW, &cooked);
 	if(ret2 == -1) return LCL_ERR;
@@ -119,7 +105,32 @@ static int cleanup(int ret) {
 	return ret;
 }
 
-static int refresh() {
+static int setij() {
+	printf("\e[6n");
+	char buffer = getchar();
+	while(buffer != '\e') buffer = getchar();
+
+	int ret = scanf("[%d;%dR", &i, &j);
+	if(ret != 2) return LCL_ERR;
+	else return LCL_OK;
+}
+
+static int refresh_noch() {
+	printf("\e[%d;%dH\e[J", home_i, home_j);
+
+	for(size_t a = 0; a < insertion_point; a++)
+		putchar(data[a]);
+
+	printf("\e[s\e[?25l%s", &data[insertion_point]);
+
+	int ret = setij();
+	if(ret != LCL_OK) return ret;
+
+	printf("\e[u\e[?25h");
+	return LCL_OK;
+}
+
+static int refresh_postch() {
 	if(!total_chars) return LCL_OK;
 	char ch = data[total_chars - 1];
 	data[total_chars - 1] = 0;
@@ -140,29 +151,33 @@ static int refresh() {
 	return LCL_OK;
 }
 
-static int setij() {
-	printf("\e[6n");
-	char buffer = getchar();
-	while(buffer != '\e') buffer = getchar();
-
-	int ret = scanf("[%d;%dR", &i, &j);
-	if(ret != 2) return LCL_ERR;
-	else return LCL_OK;
-}
-
-static int cursor(char ch) {
+static int escape_code(char ch) {
 	switch(ch) {
 	case 'D':
 		if(!insertion_point) return LCL_OK;
 
 		insertion_point--;
-		return backspace();
+		return refresh_noch();
 
 	case 'C':
 		if(insertion_point == total_chars) return LCL_OK;
 
 		insertion_point++;
-		return backspace();
+		return refresh_noch();
+
+	case 'F':
+		insertion_point = total_chars;
+		return refresh_noch();
+
+	case 'H':
+		insertion_point = 0;
+		return refresh_noch();
+
+	case 'Z':
+		if(!insertion_point) return LCL_OK;
+		if(data[insertion_point - 1] != '\t') return LCL_OK;
+
+		return pull();
 	}
 
 	return setij();
@@ -188,7 +203,7 @@ static int readch() {
 	switch(input) {
 	case '\e':
 		getchar();
-		return cursor(getchar());
+		return escape_code(getchar());
 
 	case '\n':
 		puts(&data[insertion_point]);
@@ -218,7 +233,7 @@ static int push(char ch) {
 	data[total_chars] = 0;
 
 	if(insertion_point == total_chars) return putch(ch);
-	else return refresh();
+	else return refresh_postch();
 }
 
 static int pull() {
@@ -231,5 +246,5 @@ static int pull() {
 	total_chars--;
 
 	data[total_chars] = 0;
-	return backspace();
+	return refresh_noch();
 }
