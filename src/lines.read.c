@@ -193,8 +193,7 @@ static int readch() {
 		return cursor(getchar());
 
 	case '\n':
-		putchar('\n');
-		
+		puts(&data[insertion_point]);
 		finished = true;
 		break;
 
