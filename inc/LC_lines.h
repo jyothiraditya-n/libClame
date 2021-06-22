@@ -29,7 +29,9 @@ typedef struct {
 
 extern bool LCl_sigint;
 
-extern int LCl_fread(FILE *file, LCl_t *line);
+extern int LCl_bread(char *buffer, size_t length);
+extern int LCl_fread(FILE *file, char *buffer, size_t length);
+
 extern int LCl_read(LCl_t *line);
 
 #define LCL_ERR -1

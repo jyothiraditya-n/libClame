@@ -25,8 +25,6 @@
 
 #include <LC_lines.h>
 
-bool LCl_sigint;
-
 static struct termios cooked, raw;
 
 static char *data;

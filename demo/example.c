@@ -25,6 +25,7 @@
 #include <LC_vars.h>
 
 static const char *name;
+static bool no_ansi;
 
 static bool flag = false;
 static char message[4096] = "";
@@ -62,7 +63,8 @@ int main(int argc, char **argv) {
 
 	while(true) {
 		printf("Type a message! > ");
-		ret = LCl_read(&line);
+		if(no_ansi) ret = LCl_bread(message, 4096);
+		else ret = LCl_read(&line);
 
 		switch(ret) {
 		case LCL_OK:
@@ -118,6 +120,8 @@ static void help(int ret) {
 	puts("    -f, --flag              set the flag");
 	puts("    -m, --message MESSAGE   set the message to MESSAGE");
 	puts("    -i, --ints INTS... [--] set the ints to INTS\n");
+
+	puts("    -n, --no-ansi           disables the use of ANSI escape codes.\n");
 
 	puts("  Note: A '--' before [FILES] signifies the end of the options. Any");
 	puts("        options found after it will be treated as filenames.\n");
@@ -199,6 +203,16 @@ static void init() {
 	arg -> long_flag = "ints";
 	arg -> short_flag = 'i';
 	arg -> var = var;
+
+	var = LCv_new();
+	var -> id = "no-ansi";
+	var -> data = &no_ansi;
+
+	arg = LCa_new();
+	arg -> long_flag = "no-ansi";
+	arg -> short_flag = 'n';
+	arg -> var = var;
+	arg -> value = true;
 
 	LCa_noflags = files;
 	LCa_max_noflags = 4096;

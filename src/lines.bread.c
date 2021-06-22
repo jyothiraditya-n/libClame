@@ -21,18 +21,23 @@
 
 #include <LC_lines.h>
 
-int LCl_fread(FILE *file, char *buffer, size_t length) {
+bool LCl_sigint;
+
+int LCl_bread(char *buffer, size_t length) {
 	int c = ' ';
 	size_t i = 0;
 	bool clipped = false;
 
 	*buffer = 0;
-
-	if(feof(file)) return LCL_EOF;
+	LCl_sigint = false;
 
 	while(c != '\n' && isspace(c)) {
-		c = fgetc(file);
-		if(feof(file)) return LCL_EOF;
+		c = fgetc(stdin);
+
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_INT;
+		}
 	}
 
 	while(c != '\n') {
@@ -45,15 +50,23 @@ int LCl_fread(FILE *file, char *buffer, size_t length) {
 		buffer[i + 1] = 0;
 		i++;
 
-		c = fgetc(file);
-		if(feof(file)) return LCL_EOF;
+		c = fgetc(stdin);
+
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_INT;
+		}
 	}
 
 	if(!clipped) return LCL_OK;
 
 	while(c != '\n') {
-		c = fgetc(file);
-		if(feof(file)) return LCL_CUT_EOF;
+		c = fgetc(stdin);
+
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_CUT_INT;
+		}
 	}
 
 	return LCL_CUT;
