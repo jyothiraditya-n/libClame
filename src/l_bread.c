@@ -14,34 +14,58 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
+#include <ctype.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
 
-#ifndef LC_LINES_H
-#define LC_LINES_H
+#include <LC_lines.h>
 
-extern char *LCl_buffer;
-extern size_t LCl_length;
-extern bool LCl_sigint;
+int LCl_bread() {
+	int c = ' ';
+	size_t i = 0;
+	bool clipped = false;
 
-extern int LCl_read();
-extern signed char LCl_readch();
+	*LCl_buffer = 0;
+	LCl_sigint = false;
 
-extern int LCl_bread();
-extern int LCl_fread(FILE *file, char *buffer, size_t length);
+	while(c != '\n' && isspace(c)) {
+		c = fgetc(stdin);
 
-#define LCL_ERR -1
-#define LCL_OK 0
-#define LCL_CUT 1
-#define LCL_EOF 2
-#define LCL_INT 3
-#define LCL_CUT_EOF 4
-#define LCL_CUT_INT 5
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_INT;
+		}
+	}
 
-#define LCLCH_INT -3
-#define LCLCH_ERR -2
-#define LCLCH_BAD -1
-#define LCLCH_OK 0
+	while(c != '\n') {
+		if(i + 1 >= LCl_length) {
+			clipped = true;
+			break;
+		};
 
-#endif
+		LCl_buffer[i] = (char) c;
+		LCl_buffer[i + 1] = 0;
+		i++;
+
+		c = fgetc(stdin);
+
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_INT;
+		}
+	}
+
+	if(!clipped) return LCL_OK;
+
+	while(c != '\n') {
+		c = fgetc(stdin);
+
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_CUT_INT;
+		}
+	}
+
+	return LCL_CUT;
+}

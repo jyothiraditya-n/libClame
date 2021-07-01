@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <termios.h>
@@ -25,54 +26,58 @@
 
 #include <LC_lines.h>
 
-static struct termios cooked, raw;
+char *LCl_buffer;
+size_t LCl_length;
+bool LCl_sigint;
 
-static char *data;
-static size_t length;
+static struct termios cooked, raw;
+static char *inp_buffer;
+static size_t first, last;
 
 static size_t insertion_point;
 static size_t total_chars;
 static bool finished;
 
-static int home_i, home_j;
-static int i, j;
+static size_t home_i, home_j;
+static size_t i, j;
 
 static int cleanup();
+static char getch();
 static int setij();
 
 static int refresh_noch();
 static int refresh_postch();
 
+static int printchar(char ch);
+static int readchar();
+
 static int escape_code(char ch);
-static int putch(char ch);
-static int readch();
+static int insert_char(char ch);
+static int delete_char();
 
-static int push(char ch);
-static int pull();
-
-int LCl_read(LCl_t *line) {
-	data = line -> data;
-	length = line -> length;
-
+int LCl_read() {
 	int ret = tcgetattr(STDIN_FILENO, &cooked);
 	if(ret == -1) return LCL_ERR;
 
 	raw = cooked;
 	raw.c_lflag &= ~ICANON;
 	raw.c_lflag &= ~ECHO;
+
 	raw.c_cc[VINTR] = 3;
 	raw.c_lflag |= ISIG;
 
 	ret = tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 	if(ret == -1) return LCL_ERR;
 
+	inp_buffer = malloc(LCl_length * sizeof(char));
+	if(!inp_buffer) return cleanup(LCL_ERR);
+	first = 0; last = 0;
+
 	ret = setij();
 	if(ret != LCL_OK) return cleanup(ret);
+	home_i = i; home_j = j;
 
-	home_i = i;
-	home_j = j;
-
-	*data = 0;
+	*LCl_buffer = 0;
 	insertion_point = 0;
 	total_chars = 0;
 
@@ -81,47 +86,67 @@ int LCl_read(LCl_t *line) {
 	LCl_sigint = false;
 
 	while(ret == LCL_OK && !finished) {
-		if(total_chars >= length - 1) return cleanup(LCL_ERR);
-		else ret = readch();
+		if(total_chars + 1 >= LCl_length) return cleanup(LCL_ERR);
+		else ret = readchar();
 	}
 
 	return cleanup(ret);
 }
 
 static int cleanup(int ret) {
-	int ret2 = tcsetattr(STDIN_FILENO, TCSANOW, &cooked);
+	int ret2 = setij();
+	if(ret2 != LCL_OK) return ret2;
+
+	if(inp_buffer) free(inp_buffer);
+
+	ret2 = tcsetattr(STDIN_FILENO, TCSANOW, &cooked);
 	if(ret2 == -1) return LCL_ERR;
 
 	size_t total, a;
-	for(total = 0; isspace(data[total]); total++);
+	for(total = 0; isspace(LCl_buffer[total]); total++);
 
-	for(a = 0; data[total + a]; a++) {
-		data[a] = data[total + a];
+	for(a = 0; LCl_buffer[total + a]; a++) {
+		LCl_buffer[a] = LCl_buffer[total + a];
 	}
 
-	data[a] = 0;
-
+	LCl_buffer[a] = 0;
 	if(ret == LCL_INT) puts("^C");
+
 	return ret;
+}
+
+static char getch() {
+	if(!last) return getchar();
+
+	if(first == last) {
+		first = 0; last = 0;
+		return getchar();
+	}
+
+	return inp_buffer[first++];
 }
 
 static int setij() {
 	printf("\e[6n");
-	char buffer = getchar();
-	while(buffer != '\e') buffer = getchar();
+	inp_buffer[last] = getchar();
 
-	int ret = scanf("[%d;%dR", &i, &j);
+	while(inp_buffer[last] != '\e') {
+		if(last + 1 < LCl_length) last++;
+		inp_buffer[last] = getchar();
+	}
+
+	int ret = scanf("[%zu;%zuR", &i, &j);
 	if(ret != 2) return LCL_ERR;
 	else return LCL_OK;
 }
 
 static int refresh_noch() {
-	printf("\e[%d;%dH\e[J", home_i, home_j);
+	printf("\e[%zu;%zuH\e[J", home_i, home_j);
 
 	for(size_t a = 0; a < insertion_point; a++)
-		putchar(data[a]);
+		putchar(LCl_buffer[a]);
 
-	printf("\e[s\e[?25l%s", &data[insertion_point]);
+	printf("\e[s\e[?25l%s", &LCl_buffer[insertion_point]);
 
 	int ret = setij();
 	if(ret != LCL_OK) return ret;
@@ -132,21 +157,57 @@ static int refresh_noch() {
 
 static int refresh_postch() {
 	if(!total_chars) return LCL_OK;
-	char ch = data[total_chars - 1];
-	data[total_chars - 1] = 0;
+	char ch = LCl_buffer[total_chars - 1];
+	LCl_buffer[total_chars - 1] = 0;
 
-	printf("\e[%d;%dH\e[J", home_i, home_j);
+	printf("\e[%zu;%zuH\e[J", home_i, home_j);
 
 	for(size_t a = 0; a < insertion_point; a++)
-		putchar(data[a]);
+		putchar(LCl_buffer[a]);
 
-	printf("\e[s\e[?25l%s", &data[insertion_point]);
+	printf("\e[s\e[?25l%s", &LCl_buffer[insertion_point]);
 
-	int ret = putch(ch);
+	int ret = printchar(ch);
 	if(ret != LCL_OK) return ret;
 
 	printf("\e[u\e[?25h");
-	data[total_chars - 1] = ch;
+	LCl_buffer[total_chars - 1] = ch;
+	return LCL_OK;
+}
+
+static int printchar(char ch) {
+	size_t old_i = i;
+	size_t old_j = j;
+	putchar(ch);
+
+	int ret = setij();
+	if(ret != LCL_OK) return LCL_ERR;
+
+	if(j < old_j && i == old_i) home_i--;
+	return LCL_OK;
+}
+
+static int readchar() {
+	char input = getch();
+	if(LCl_sigint) return LCL_INT;
+
+	switch(input) {
+	case '\e':
+		getch();
+		return escape_code(getch());
+
+	case '\n':
+		puts(&LCl_buffer[insertion_point]);
+		finished = true;
+		break;
+
+	case 0x7f:
+		return delete_char();
+
+	default:
+		if(!isprint(input) && input != '\t') return setij();
+		return insert_char(input);
+	}
 
 	return LCL_OK;
 }
@@ -175,76 +236,34 @@ static int escape_code(char ch) {
 
 	case 'Z':
 		if(!insertion_point) return LCL_OK;
-		if(data[insertion_point - 1] != '\t') return LCL_OK;
-
-		return pull();
+		
+		for(insertion_point--; insertion_point; insertion_point--) {
+			if(isspace(LCl_buffer[insertion_point])) break;
+		}
+		return refresh_noch();
 	}
 
 	return setij();
 }
 
-static int putch(char ch) {
-	int old_i = i;
-	int old_j = j;
-
-	putchar(ch);
-
-	int ret = setij();
-	if(ret != LCL_OK) return LCL_ERR;
-
-	if(j < old_j && i == old_i) home_i--;
-	return LCL_OK;
-}
-
-static int readch() {
-	char input = getchar();
-	if(LCl_sigint) return LCL_INT;
-
-	switch(input) {
-	case '\e':
-		getchar();
-		return escape_code(getchar());
-
-	case '\n':
-		puts(&data[insertion_point]);
-		finished = true;
-		break;
-
-	case 0x7f:
-		return pull();
-
-	default:
-		if(!isprint(input) && input != '\t') return setij();
-		return push(input);
-	}
-
-	return LCL_OK;
-}
-
-static int push(char ch) {
+static int insert_char(char ch) {
 	for(size_t a = total_chars; a > insertion_point; a--)
-		data[a] = data[a - 1];
+		LCl_buffer[a] = LCl_buffer[a - 1];
 
-	data[insertion_point] = ch;
+	LCl_buffer[insertion_point++] = ch;
+	LCl_buffer[++total_chars] = 0;
 
-	insertion_point++;
-	total_chars++;
-
-	data[total_chars] = 0;
-
-	if(insertion_point == total_chars) return putch(ch);
+	if(insertion_point == total_chars) return printchar(ch);
 	else return refresh_postch();
 }
 
-static int pull() {
+static int delete_char() {
 	if(!insertion_point) return LCL_OK;
 
 	for(size_t a = insertion_point; a < total_chars; a++)
-		data[a - 1] = data[a];
+		LCl_buffer[a - 1] = LCl_buffer[a];
 
 	insertion_point--;
-	total_chars--;
-
-	data[total_chars] = 0;
+	LCl_buffer[--total_chars] = 0;
 	return refresh_noch();
 }

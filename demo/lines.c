@@ -20,27 +20,24 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <signal.h>
+
 #include <LC_args.h>
 #include <LC_lines.h>
 #include <LC_vars.h>
 
 static const char *name;
-static bool no_ansi;
-
-static bool flag = false;
 static char message[4096] = "";
-static int ints[4096];
-static size_t length;
-
-static const char *files[4096];
+static bool no_ansi;
 
 static void about();
 static void help(int ret);
-static void print_ints();
-static void print_files();
 
 static void help_flag();
 static void init();
+
+static void read_message();
+static void on_interrupt(int signum);
 
 int main(int argc, char **argv) {
 	name = argv[0];
@@ -49,42 +46,10 @@ int main(int argc, char **argv) {
 	int ret = LCa_read(argc, argv);
 	if(ret != LCA_OK) help(1);
 
-	putchar('\n');
-	if(flag) puts("  The flag was set!\n");
-	else puts("  The flag wasn't set.\n");
+	LCl_buffer = message;
+	LCl_length = 4096;
 
-	if(message[0]) printf("  Message: %s\n\n", message);
-	if(length) print_ints();
-	if(files[0]) print_files();
-
-	LCl_t line;
-	line.data = message;
-	line.length = 4096;
-
-	while(true) {
-		printf("Type a message! > ");
-		if(no_ansi) ret = LCl_bread(message, 4096);
-		else ret = LCl_read(&line);
-
-		switch(ret) {
-		case LCL_OK:
-			if(strlen(message))
-				printf("  You typed: %s\n", message);
-
-			continue;
-
-		case LCL_CUT:
-			fprintf(stderr, "%s: error: input too long\n", name);
-			continue;
-
-		default:
-			fprintf(stderr, "%s: error: unknown error\n", name);
-			perror("cstdlib");
-			exit(1);
-		}
-		
-	}
-
+	while(true) read_message();
 	exit(0);
 }
 
@@ -117,42 +82,10 @@ static void help(int ret) {
 	puts("    -a, --about             print the about dialogue");
 	puts("    -h, --help              print this help dialogue\n");
 
-	puts("    -f, --flag              set the flag");
-	puts("    -m, --message MESSAGE   set the message to MESSAGE");
-	puts("    -i, --ints INTS... [--] set the ints to INTS\n");
-
 	puts("    -n, --no-ansi           disables the use of ANSI escape codes.\n");
-
-	puts("  Note: A '--' before [FILES] signifies the end of the options. Any");
-	puts("        options found after it will be treated as filenames.\n");
-
-	puts("  Note: After INTS, you will need two '--'s, as the optional '--'");
-	puts("        directly after INTS only signals the end of the INTS and");
-	puts("        not the end of the options.\n");
 
 	puts("  Happy coding! :)\n");
 	exit(ret);
-}
-
-static void print_ints() {
-	printf("  Ints: ");
-
-	for(size_t i = 0; i < length; i++) {
-		printf("%d", ints[i]);
-
-		if(i + 1 < length) printf(", ");
-	}
-
-	puts("\n");
-}
-
-static void print_files() {
-	for(size_t i = 0; i < 4096; i++) {
-		if(files[i]) printf("  File: %s\n", files[i]);
-		else break;
-	}
-
-	putchar('\n');
 }
 
 static void help_flag() {
@@ -160,6 +93,8 @@ static void help_flag() {
 }
 
 static void init() {
+	signal(SIGINT, on_interrupt);
+
 	LCa_t *arg = LCa_new();
 	arg -> long_flag = "about";
 	arg -> short_flag = 'a';
@@ -171,40 +106,6 @@ static void init() {
 	arg -> pre = help_flag;
 
 	LCv_t *var = LCv_new();
-	var -> id = "flag";
-	var -> data = &flag;
-
-	arg = LCa_new();
-	arg -> long_flag = "flag";
-	arg -> short_flag = 'f';
-	arg -> var = var;
-	arg -> value = true;
-
-	var = LCv_new();
-	var -> id = "message";
-	var -> fmt = "%4095[^\t\n]";
-	var -> data = message;
-
-	arg = LCa_new();
-	arg -> long_flag = "message";
-	arg -> short_flag = 'm';
-	arg -> var = var;
-
-	var = LCv_new();
-	var -> id = "ints";
-	var -> fmt = "%d";
-	var -> data = ints;
-	var -> len = &length;
-	var -> min_len = 0;
-	var -> max_len = 4096;
-	var -> size = sizeof(int);
-
-	arg = LCa_new();
-	arg -> long_flag = "ints";
-	arg -> short_flag = 'i';
-	arg -> var = var;
-
-	var = LCv_new();
 	var -> id = "no-ansi";
 	var -> data = &no_ansi;
 
@@ -213,7 +114,46 @@ static void init() {
 	arg -> short_flag = 'n';
 	arg -> var = var;
 	arg -> value = true;
+}
 
-	LCa_noflags = files;
-	LCa_max_noflags = 4096;
+static void read_message() {
+	int ret;
+
+	printf("Type a message! > ");
+	if(no_ansi) ret = LCl_bread();
+	else ret = LCl_read();
+
+	switch(ret) {
+	case LCL_OK:
+		if(strlen(message)) printf("  You typed: %s\n", message);
+		return;
+
+	case LCL_CUT:
+		fprintf(stderr, "%s: error: input too long\n", name);
+		return;
+
+	case LCL_INT:
+		if(no_ansi) exit(0);
+		else printf("  Exit? [Y/n]: ");
+
+		char ret = LCl_readch();
+
+		if(ret == LCLCH_ERR) exit(1);
+		else if(ret == 'Y' || ret == 'y' || ret == LCLCH_INT) exit(0);
+		else break;
+
+	default:
+		fprintf(stderr, "%s: error: unknown error\n", name);
+		exit(1);
+	}
+}
+
+static void on_interrupt(int signum) {
+	if(signum != SIGINT) {
+		signal(signum, SIG_DFL);
+		return;
+	}
+
+	signal(SIGINT, on_interrupt);
+	LCl_sigint = true;
 }

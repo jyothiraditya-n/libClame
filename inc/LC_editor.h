@@ -14,60 +14,21 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
-#include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
 
-#include <LC_lines.h>
+#ifndef LC_EDITOR_H
+#define LC_EDITOR_H
 
-bool LCl_sigint;
+extern const char *LCe_banner;
+extern char *LCe_buffer;
+extern size_t LCe_length;
 
-int LCl_bread(char *buffer, size_t length) {
-	int c = ' ';
-	size_t i = 0;
-	bool clipped = false;
+extern bool LCe_sigint;
 
-	*buffer = 0;
-	LCl_sigint = false;
+extern int LCe_edit();
 
-	while(c != '\n' && isspace(c)) {
-		c = fgetc(stdin);
+#define LCE_OK 0
+#define LCE_ERR 1
 
-		if(LCl_sigint) {
-			putchar('\n');
-			return LCL_INT;
-		}
-	}
-
-	while(c != '\n') {
-		if(i + 1 >= length) {
-			clipped = true;
-			break;
-		};
-
-		buffer[i] = (char) c;
-		buffer[i + 1] = 0;
-		i++;
-
-		c = fgetc(stdin);
-
-		if(LCl_sigint) {
-			putchar('\n');
-			return LCL_INT;
-		}
-	}
-
-	if(!clipped) return LCL_OK;
-
-	while(c != '\n') {
-		c = fgetc(stdin);
-
-		if(LCl_sigint) {
-			putchar('\n');
-			return LCL_CUT_INT;
-		}
-	}
-
-	return LCL_CUT;
-}
+#endif
