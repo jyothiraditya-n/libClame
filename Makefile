@@ -18,9 +18,10 @@ headers = $(wildcard inc/*.h)
 objs = $(patsubst %.c,%.o,$(wildcard src/*.c))
 
 demos = $(patsubst demo/%.c,%,$(wildcard demo/*.c))
-objs += $(patsubst %.c,%.o,$(wildcard demo/*.c))
+demo_objs = $(patsubst %.c,%.o,$(wildcard demo/*.c))
 
 files = $(foreach file,$(objs),$(wildcard $(file)))
+files += $(foreach file,$(demo_objs),$(wildcard $(file)))
 files += $(foreach file,$(demos),$(wildcard $(file)))
 files += $(wildcard *.a)
 
@@ -29,7 +30,7 @@ CLEAN = $(foreach file,$(files),rm $(file);)
 CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O3 -I inc/
 LD_LIBS ?= -L. -lClame
 
-$(objs) : %.o : %.c $(headers)
+$(objs) $(demo_ojbs) : %.o : %.c $(headers)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 libClame.a : $(objs)
