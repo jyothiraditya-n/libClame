@@ -27,8 +27,9 @@
 #include <LC_vars.h>
 
 static const char *name;
-static char message[4096] = "\tYou can type something or the other here.\n"
-"The program will print it out when it exits.\n\n"
+static char message[4096] = "\tYou can type something or the other here. "
+"The program will print it out when it exits. (Unless the program has broken "
+"down horribly or something else has gone very wrong.)\n\n"
 
 "\tLorem ipsum dolor sit amet, consectetur "
 "adipiscing elit. Morbi in augue tempor, pretium ante quis, condimentum nisi. "
