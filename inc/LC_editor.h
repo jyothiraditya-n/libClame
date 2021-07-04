@@ -25,6 +25,7 @@ extern char *LCe_buffer;
 extern size_t LCe_length;
 
 extern bool LCe_sigint;
+extern bool LCe_dirty;
 
 extern int LCe_edit();
 

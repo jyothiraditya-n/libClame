@@ -31,6 +31,7 @@ char *LCe_buffer;
 size_t LCe_length;
 
 bool LCe_sigint;
+bool LCe_dirty;
 
 static char *inp_buffer;
 static size_t first, last;
@@ -510,7 +511,8 @@ static void escape_code(char ch) {
 }
 
 static void insert(char ch) {
-	if(total_chars == LCe_length) return;
+	if(total_chars + 1 >= LCe_length) return;
+	else LCe_dirty = true;
 
 	for(size_t i = total_chars; i > insertion_point; i--)
 		LCe_buffer[i] = LCe_buffer[i - 1];
@@ -536,6 +538,7 @@ static void insert(char ch) {
 
 static void delete() {
 	if(!insertion_point) return;
+	else LCe_dirty = true;
 
 	for(size_t i = insertion_point; i < total_chars; i++)
 		LCe_buffer[i - 1] = LCe_buffer[i];

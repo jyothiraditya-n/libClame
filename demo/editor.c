@@ -91,11 +91,13 @@ int main(int argc, char **argv) {
 	LCe_banner = "libClame: Command-line Arguments Made Easy";
 	LCe_buffer = message;
 	LCe_length = 4096;
+	LCe_dirty = false;
 
 	ret = LCe_edit();
 	switch(ret) {
 	case LCE_OK:
-		printf("\e[H\e[J%s\n", message);
+		if(LCe_dirty) printf("\e[H\e[J%s\n", message);
+		else printf("\e[H\e[J");
 		exit(0);
 
 	case LCE_ERR:
