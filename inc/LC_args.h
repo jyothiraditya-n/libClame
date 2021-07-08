@@ -42,6 +42,12 @@ extern LCa_t *LCa_new();
 extern int LCa_read(int argc, char **argv);
 
 #define LCA_OK 0
-#define LCA_BAD_CMD 1
+#define LCA_BAD_FLAG 1
+#define LCA_NO_FLAG 2
+#define LCA_VAR_RESET 3
+#define LCA_NO_VAL 4
+#define LCA_BAD_VAL 5
+#define LCA_LESS_VALS 6
+#define LCA_MORE_VALS 7
 
 #endif

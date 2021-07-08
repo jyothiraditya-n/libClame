@@ -107,11 +107,10 @@ static int proc_lflag() {
 	}
 
 	if(!arg) {
-		fprintf(stderr, "%s: error: "
-			"unknown command '%s'.\n",
+		fprintf(stderr, "%s: error: unknown flag '%s'.\n",
 			av[0], av[ai]);
 
-		return LCA_BAD_CMD;
+		return LCA_BAD_FLAG;
 	}
 
 	return proc_arg(arg);
@@ -119,10 +118,10 @@ static int proc_lflag() {
 
 static int proc_noflag() {
 	if(!LCa_noflags) {
-		fprintf(stderr, "%s: error: argument '%s' does not have the "
-			"correct preceding flag.\n", av[0], av[ai]);
+		fprintf(stderr, "%s: error: argument '%s' does not have a "
+			"flag.\n", av[0], av[ai]);
 
-		return LCA_BAD_CMD;
+		return LCA_NO_FLAG;
 	}
 
 	if(noflags < LCa_max_noflags) {
@@ -132,8 +131,8 @@ static int proc_noflag() {
 		return LCA_OK;
 	}
 
-	fprintf(stderr, "%s: error: too many arguments.\n", av[0]);
-	return LCA_BAD_CMD;
+	fprintf(stderr, "%s: error: too many flagless arguments.\n", av[0]);
+	return LCA_NO_FLAG;
 }
 
 static int proc_sflag(char c) {
@@ -143,11 +142,8 @@ static int proc_sflag(char c) {
 	}
 
 	if(!arg) {
-		fprintf(stderr, "%s: error: "
-			"unknown flag '%c'.\n",
-			av[0], c);
-
-		return LCA_BAD_CMD;
+		fprintf(stderr, "%s: error: unknown flag '%c'.\n", av[0], c);
+		return LCA_BAD_FLAG;
 	}
 
 	return proc_arg(arg);
@@ -169,11 +165,10 @@ static int proc_var(LCa_t *arg) {
 	LCv_t *var = arg -> var;
 
 	if(var -> dirty) {
-		fprintf(stderr, "%s: error: "
-			"variable '%s' has already been set.\n",
-			av[0], var -> id);
+		fprintf(stderr, "%s: error: variable '%s' has already "
+			"been set.\n", av[0], var -> id);
 
-		return LCA_BAD_CMD;
+		return LCA_VAR_RESET;
 	}
 
 	if(!strcmp(var -> fmt, "") && !var -> len) {
@@ -191,11 +186,23 @@ static int proc_var(LCa_t *arg) {
 
 static int get_val(LCv_t *var) {
 	if(var -> len) return get_arr(var);
-	if(ai + 1 == ac) return LCA_BAD_CMD;
+
+	if(ai + 1 == ac) {
+		fprintf(stderr, "%s: error: value for variable '%s' "
+			"not provided.\n", av[0], var -> id);
+
+		return LCA_NO_VAL;
+	}
 
 	ai++;
 	int ret = sscanf(av[ai], var -> fmt, var -> data);
-	if(ret != 1) return LCA_BAD_CMD;
+
+	if(ret != 1) {
+		fprintf(stderr, "%s: error: '%s' is not a valid value "
+			"for variable '%s'.\n", av[0], av[ai] , var -> id);
+
+		return LCA_BAD_VAL;
+	}
 
 	var -> dirty = true;
 	return LCA_OK;
@@ -215,18 +222,20 @@ static int get_arr(LCv_t *var) {
 		if(ret != 1) break;
 	}
 
-	ai++;
-
-	size_t len = k - ai;
+	ai++; size_t len = k - ai;
 
 	if(len < var -> min_len) {
-		fprintf(stderr, "%s: error: too few arguments.\n", av[0]);
-		return LCA_BAD_CMD;
+		fprintf(stderr, "%s: error: too few values for array '%s'.\n",
+			av[0], var -> id);
+
+		return LCA_MORE_VALS;
 	}
 
 	if(len > var -> max_len) {
-		fprintf(stderr, "%s: error: too few arguments.\n", av[0]);
-		return LCA_BAD_CMD;
+		fprintf(stderr, "%s: error: too many arguments "
+			"for array '%s'.\n", av[0], var -> id);
+
+		return LCA_LESS_VALS;
 	}
 
 	*var -> len = len;
