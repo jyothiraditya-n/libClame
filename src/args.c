@@ -41,7 +41,7 @@ static int get_arr(LCv_t *var);
 static int ac;
 static char **av;
 static int ai;
-static size_t aj;
+static size_t aj, aj_max;
 
 static size_t noflags;
 
@@ -82,7 +82,7 @@ int LCa_read(int argc, char **argv) {
 }
 
 static int proc_cmd() {
-	size_t len = strlen(av[ai]);
+	aj_max = strlen(av[ai]);
 	
 	if(!strcmp(av[ai], "-")) return proc_noflag();
 
@@ -91,7 +91,7 @@ static int proc_cmd() {
 
 	int i = ai;
 
-	for(aj = 1; aj < len; aj++) {
+	for(aj = 1; aj < aj_max; aj++) {
 		int ret = proc_sflag(av[i][aj]);
 		if(ret != LCA_OK) return ret;
 	}
@@ -186,6 +186,13 @@ static int proc_var(LCa_t *arg) {
 
 static int get_val(LCv_t *var) {
 	if(var -> len) return get_arr(var);
+	int ret = 0;
+
+	if(aj && aj + 1 < aj_max) {
+		ret = sscanf(av[ai] + aj + 1, var -> fmt, var -> data);
+		aj = aj_max;
+		goto end;
+	}
 
 	if(ai + 1 == ac) {
 		fprintf(stderr, "%s: error: value for variable '%s' "
@@ -195,9 +202,9 @@ static int get_val(LCv_t *var) {
 	}
 
 	ai++;
-	int ret = sscanf(av[ai], var -> fmt, var -> data);
+	ret = sscanf(av[ai], var -> fmt, var -> data);
 
-	if(ret != 1) {
+end:	if(ret != 1) {
 		fprintf(stderr, "%s: error: '%s' is not a valid value "
 			"for variable '%s'.\n", av[0], av[ai] , var -> id);
 
