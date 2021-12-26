@@ -41,6 +41,93 @@ static bool finished;
 static size_t home_i, home_j;
 static size_t i, j;
 
+int LCl_bread() {
+	int c = ' ';
+	size_t i = 0;
+	bool clipped = false;
+
+	*LCl_buffer = 0;
+	LCl_sigint = false;
+
+	while(c != '\n' && isspace(c)) {
+		c = fgetc(stdin);
+
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_INT;
+		}
+	}
+
+	while(c != '\n') {
+		if(i + 1 >= LCl_length) {
+			clipped = true;
+			break;
+		};
+
+		LCl_buffer[i] = (char) c;
+		LCl_buffer[i + 1] = 0;
+		i++;
+
+		c = fgetc(stdin);
+
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_INT;
+		}
+	}
+
+	if(!clipped) return LCL_OK;
+
+	while(c != '\n') {
+		c = fgetc(stdin);
+
+		if(LCl_sigint) {
+			putchar('\n');
+			return LCL_CUT_INT;
+		}
+	}
+
+	return LCL_CUT;
+}
+
+int LCl_fread(FILE *file, char *buffer, size_t length) {
+	int c = ' ';
+	size_t i = 0;
+	bool clipped = false;
+
+	*buffer = 0;
+
+	if(feof(file)) return LCL_EOF;
+
+	while(c != '\n' && isspace(c)) {
+		c = fgetc(file);
+		if(feof(file)) return LCL_EOF;
+	}
+
+	while(c != '\n') {
+		if(i + 1 >= length) {
+			clipped = true;
+			break;
+		};
+
+		buffer[i] = (char) c;
+		buffer[i + 1] = 0;
+		i++;
+
+		c = fgetc(file);
+		if(feof(file)) return LCL_EOF;
+	}
+
+	if(!clipped) return LCL_OK;
+
+	while(c != '\n') {
+		c = fgetc(file);
+		if(feof(file)) return LCL_CUT_EOF;
+	}
+
+	return LCL_CUT;
+}
+
 static int cleanup();
 static char getch();
 static int setij();
@@ -69,9 +156,8 @@ int LCl_read() {
 	ret = tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 	if(ret == -1) return LCL_ERR;
 
-	inp_buffer = malloc(LCl_length * sizeof(char));
+	if(!inp_buffer) inp_buffer = malloc(LCl_length * sizeof(char));
 	if(!inp_buffer) return cleanup(LCL_ERR);
-	first = 0; last = 0;
 
 	ret = setij();
 	if(ret != LCL_OK) return cleanup(ret);
@@ -96,8 +182,6 @@ int LCl_read() {
 static int cleanup(int ret) {
 	int ret2 = setij();
 	if(ret2 != LCL_OK) return ret2;
-
-	if(inp_buffer) free(inp_buffer);
 
 	ret2 = tcsetattr(STDIN_FILENO, TCSANOW, &cooked);
 	if(ret2 == -1) return LCL_ERR;
@@ -266,4 +350,66 @@ static int delete_char() {
 	insertion_point--;
 	LCl_buffer[--total_chars] = 0;
 	return refresh_noch();
+}
+
+static signed char cleanup_ch(char ret);
+static int flush_ch();
+
+signed char LCl_readch() {
+	int ret = tcgetattr(STDIN_FILENO, &cooked);
+	if(ret == -1) { puts("*_* ..."); return LCLCH_ERR; }
+
+	raw = cooked;
+	raw.c_lflag &= ~ICANON;
+	raw.c_lflag &= ~ECHO;
+
+	raw.c_cc[VINTR] = 3;
+	raw.c_lflag |= ISIG;
+
+	ret = tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+	if(ret == -1) { puts("*_* ..."); return LCLCH_ERR; }
+
+	ret = flush_ch();
+	if(ret != LCL_OK) return cleanup_ch(LCLCH_ERR);
+
+	LCl_sigint = false;
+	char ch = getchar();
+
+	if(ch == '\e') ret = flush_ch();
+	if(ret != LCL_OK) return cleanup_ch(LCLCH_ERR);
+
+	if(LCl_sigint) return cleanup_ch(LCLCH_INT);
+	else return cleanup_ch(ch);
+}
+
+static signed char cleanup_ch(char ret) {
+	int ret2 = tcsetattr(STDIN_FILENO, TCSANOW, &cooked);
+	if(ret2 == -1) ret = LCLCH_ERR;
+
+	switch(ret) {
+	case LCLCH_ERR:	puts("*_* ..."); break;
+	case LCLCH_INT:	puts("^C"); break;
+	case '\n':     	puts("<-'"); break;
+	case '\t':     	puts("->"); break;
+	case ' ':      	puts("[___]"); break;
+
+	default:
+		if(!isprint(ret)) return LCLCH_BAD;
+
+		putchar(ret);
+		putchar('\n');
+	}
+
+	return ret;
+}
+
+static int flush_ch() {
+	printf("\e[6n");
+	char buffer = getchar();
+	while(buffer != '\e') buffer = getchar();
+
+	size_t i, j;
+	int ret = scanf("[%zu;%zuR", &i, &j);
+	if(ret != 2) return LCL_ERR;
+	else return LCL_OK;
 }

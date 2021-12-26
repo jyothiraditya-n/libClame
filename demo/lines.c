@@ -119,7 +119,7 @@ static void init() {
 static void read_message() {
 	int ret;
 
-	printf("Type a message! > ");
+	printf("Type a message!> ");
 	if(no_ansi) ret = LCl_bread();
 	else ret = LCl_read();
 

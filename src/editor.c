@@ -47,6 +47,11 @@ static size_t post_screen;
 static size_t total_chars;
 static size_t insertion_point;
 
+static bool do_redraw_all;
+static bool do_redraw_line;
+static bool do_redraw_status;
+static bool do_redraw_to_end;
+
 static int cleanup();
 static int flush();
 static char getch();
@@ -55,6 +60,7 @@ static int gethw();
 static void refresh_all();
 static void refresh_on_tab(size_t *a, size_t *b);
 
+static void redraw();
 static void redraw_all();
 static void redraw_line();
 static void redraw_status();
@@ -110,6 +116,11 @@ int LCe_edit() {
 	LCe_sigint = false;
 	total_chars = strlen(LCe_buffer);
 	if(insertion_point > total_chars) insertion_point = 0;
+
+	do_redraw_all = false;
+	do_redraw_line = false;
+	do_redraw_status = false;
+	do_redraw_to_end = false;
 
 	refresh_all();
 	redraw_all();
@@ -244,6 +255,49 @@ static void refresh_on_tab(size_t *a, size_t *b) {
 	}
 
 	*a = i; *b = j;
+}
+
+static void redraw() {
+	static bool deferred = false;
+
+	if(last != first) {
+		deferred = true;
+		return;
+	}
+
+	if(deferred) {
+		deferred = false;
+		do_redraw_all = false;
+		do_redraw_line = false;
+		do_redraw_status = false;
+		do_redraw_to_end = false;
+		redraw_all();
+		return;
+	}
+
+	if(do_redraw_all) {
+		do_redraw_all = false;
+		do_redraw_line = false;
+		do_redraw_status = false;
+		do_redraw_to_end = false;
+		redraw_all();
+		return;
+	}
+
+	if(do_redraw_to_end) {
+		do_redraw_to_end = false;
+		redraw_to_end();
+	}
+
+	if(do_redraw_line) {
+		do_redraw_line = false;
+		redraw_line();
+	}
+
+	if(do_redraw_status) {
+		do_redraw_status = false;
+		redraw_status();
+	}
 }
 
 static void redraw_all() {
@@ -525,15 +579,16 @@ static void insert(char ch) {
 	if(y >= height) {
 		scroll++;
 		refresh_all();
-		redraw_all();
+		do_redraw_all = true;
 	}
 
 	else {
 		if(ch == '\n') printf("\e[K\n");
-		redraw_to_end();
-		redraw_status();
+		do_redraw_to_end = true;
+		do_redraw_status = true;
 	}
 
+	redraw();
 }
 
 static void delete() {
@@ -549,21 +604,23 @@ static void delete() {
 	if(insertion_point < start_points[0]) {
 		scroll--;
 		refresh_all();
-		redraw_all();
+		do_redraw_all = true;
 	}
 	
 	else if(insertion_point > start_points[y])
 	{
 		refresh_all();
-		redraw_status();
-		redraw_line();
+		do_redraw_status = true;
+		do_redraw_line = true;
 	}
 
 	else {
 		refresh_all();
-		redraw_status();
-		redraw_to_end();
+		do_redraw_status = true;
+		do_redraw_to_end = true;
 	}
+
+	redraw();
 }
 
 static size_t numch(size_t num) {
