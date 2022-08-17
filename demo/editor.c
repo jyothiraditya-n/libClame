@@ -1,5 +1,5 @@
 /* libClame: Command-line Arguments Made Easy
- * Copyright (C) 2021 Jyothiraditya Nellakra
+ * Copyright (C) 2021-2022 Jyothiraditya Nellakra
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -96,8 +96,8 @@ int main(int argc, char **argv) {
 	ret = LCe_edit();
 	switch(ret) {
 	case LCE_OK:
-		if(LCe_dirty) printf("\e[H\e[J%s\n", message);
-		else printf("\e[H\e[J");
+		if(LCe_dirty) printf("\033[H\033[J%s\n", message);
+		else printf("\033[H\033[J");
 		exit(0);
 
 	case LCE_ERR:
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 static void about() {
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
-	puts("  Copyright (C) 2021 Jyothiraditya Nellakra\n");
+	puts("  Copyright (C) 2021-2022 Jyothiraditya Nellakra\n");
 
 	puts("  This program is free software: you can redistribute it and/or modify");
 	puts("  it under the terms of the GNU General Public License as published by");

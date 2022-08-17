@@ -1,5 +1,5 @@
 /* libClame: Command-line Arguments Made Easy
- * Copyright (c) 2021 Jyothiraditya Nellakra
+ * Copyright (c) 2021-2022 Jyothiraditya Nellakra
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -147,10 +147,10 @@ static int cleanup(int ret) {
 }
 
 static int flush() {
-	printf("\e[6n");
+	printf("\033[6n");
 	inp_buffer[last] = getchar();
 
-	while(inp_buffer[last] != '\e') {
+	while(inp_buffer[last] != '\033') {
 		if(last + 1 < LCe_length) last++;
 		inp_buffer[last] = getchar();
 	}
@@ -173,10 +173,10 @@ static char getch() {
 }
 
 static int gethw() {
-	printf("\e[s\e[999;999H\e[6n\e[u");
+	printf("\033[s\033[999;999H\033[6n\033[u");
 	inp_buffer[last] = getchar();
 
-	while(inp_buffer[last] != '\e') {
+	while(inp_buffer[last] != '\033') {
 		if(last + 1 < LCe_length) last++;
 		inp_buffer[last] = getchar();
 	}
@@ -312,18 +312,18 @@ static void redraw_all() {
 		padding -= strlen(" Chars Free");
 		padding -= numch(chs_free);
 
-		printf("\e[?25l\e[H\e[J\e[7m ");
+		printf("\033[?25l\033[H\033[J\033[7m ");
 		for(size_t i = 0; i < padding; i++) putchar(' ');
-		printf("%zu Chars Free \n\e[0m", chs_free);
+		printf("%zu Chars Free \n\033[0m", chs_free);
 	}
 
 	else {
-		printf("\e[?25l\e[H\e[J\e[7m %s", LCe_banner);
+		printf("\033[?25l\033[H\033[J\033[7m %s", LCe_banner);
 		for(size_t i = 0; i < padding; i++) putchar(' ');
-		printf("%zu Chars Free \n\e[0m", chs_free);
+		printf("%zu Chars Free \n\033[0m", chs_free);
 	}
 
-	for(size_t i = 0; i < height; i++) printf("\e[K%s\n", lines[i]);
+	for(size_t i = 0; i < height; i++) printf("\033[K%s\n", lines[i]);
 
 	size_t y_eff = 1, x_eff = 1;
 	for(size_t i = 0; i < start_points[0]; i++) {
@@ -342,21 +342,21 @@ static void redraw_all() {
 	padding -= strlen("Line ") + strlen("Col ");
 	padding -= numch(x_eff) + numch(y_eff);
 
-	printf("\e[7m Hit ^C to exit.");
+	printf("\033[7m Hit ^C to exit.");
 	for(size_t i = 0; i < padding; i++) putchar(' ');
-	printf("Line %zu Col %zu \e[0m\e[%zu;%zuH\e[?25h",
+	printf("Line %zu Col %zu \033[0m\033[%zu;%zuH\033[?25h",
 		y_eff, x_eff, y + 2, x + 1);
 }
 
 static void redraw_line() {
-	printf("\e[?25l\e[%zu;1H", y + 2);
+	printf("\033[?25l\033[%zu;1H", y + 2);
 
 	for(size_t i = y; i < height; i++) {
-		printf("\e[K%s\n", lines[i]);
+		printf("\033[K%s\n", lines[i]);
 		if(lines[i][width + 1] == '\n') break;
 	}
 
-	printf("\e[%zu;%zuH\e[?25h", y + 2, x + 1);
+	printf("\033[%zu;%zuH\033[?25h", y + 2, x + 1);
 }
 
 static void redraw_status() {
@@ -372,13 +372,13 @@ static void redraw_status() {
 		padding -= strlen(" Chars Free");
 		padding -= numch(chs_free);
 
-		printf("\e[s\e[?25l\e[H\e[7m ");
+		printf("\033[s\033[?25l\033[H\033[7m ");
 		for(size_t i = 0; i < padding; i++) putchar(' ');
 		printf("%zu Chars Free ", chs_free);		
 	}
 
 	else {
-		printf("\e[s\e[?25l\e[H\e[7m %s", LCe_banner);
+		printf("\033[s\033[?25l\033[H\033[7m %s", LCe_banner);
 		for(size_t i = 0; i < padding; i++) putchar(' ');
 		printf("%zu Chars Free ", chs_free);
 	}
@@ -400,15 +400,15 @@ static void redraw_status() {
 	padding -= strlen("Line ") + strlen("Col ");
 	padding -= numch(x_eff) + numch(y_eff);
 
-	printf("\e[%zu;0H\e[7m Hit ^C to exit.", height + 2);
+	printf("\033[%zu;0H\033[7m Hit ^C to exit.", height + 2);
 	for(size_t i = 0; i < padding; i++) putchar(' ');
-	printf("Line %zu Col %zu \e[0m\e[u\e[?25h", y_eff, x_eff);
+	printf("Line %zu Col %zu \033[0m\033[u\033[?25h", y_eff, x_eff);
 }
 
 static void redraw_to_end() {
-	printf("\e[?25l\e[%zu;1H", y + 2);
-	for(size_t i = y; i < height; i++) printf("\e[K%s\n", lines[i]);
-	printf("\e[%zu;%zuH\e[?25h", y + 2, x + 1);
+	printf("\033[?25l\033[%zu;1H", y + 2);
+	for(size_t i = y; i < height; i++) printf("\033[K%s\n", lines[i]);
+	printf("\033[%zu;%zuH\033[?25h", y + 2, x + 1);
 }
 
 static void cursor_up() {
@@ -436,7 +436,7 @@ static void cursor_up() {
 
 	insertion_point = i < start_points[y] ? i : i - 1;
 	refresh_all(); redraw_status();
-	printf("\e[%zu;%zuH", y + 2, x + 1);
+	printf("\033[%zu;%zuH", y + 2, x + 1);
 }
 
 static void cursor_down() {
@@ -472,7 +472,7 @@ static void cursor_down() {
 
 	insertion_point = i < limit ? i : i - 1;
 	refresh_all(); redraw_status();
-	printf("\e[%zu;%zuH", y + 2, x + 1);
+	printf("\033[%zu;%zuH", y + 2, x + 1);
 }
 
 static void cursor_left() {
@@ -536,7 +536,7 @@ static void get_input() {
 	if(LCe_sigint) return;
 
 	switch(ch) {
-	case '\e':
+	case '\033':
 		getch();
 		escape_code(getch());
 		break;
@@ -583,7 +583,7 @@ static void insert(char ch) {
 	}
 
 	else {
-		if(ch == '\n') printf("\e[K\n");
+		if(ch == '\n') printf("\033[K\n");
 		do_redraw_to_end = true;
 		do_redraw_status = true;
 	}

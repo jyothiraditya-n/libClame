@@ -1,5 +1,5 @@
 /* libClame: Command-line Arguments Made Easy
- * Copyright (C) 2021 Jyothiraditya Nellakra
+ * Copyright (C) 2021-2022 Jyothiraditya Nellakra
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -211,10 +211,10 @@ static char getch() {
 }
 
 static int setij() {
-	printf("\e[6n");
+	printf("\033[6n");
 	inp_buffer[last] = getchar();
 
-	while(inp_buffer[last] != '\e') {
+	while(inp_buffer[last] != '\033') {
 		if(last + 1 < LCl_length) last++;
 		inp_buffer[last] = getchar();
 	}
@@ -225,17 +225,17 @@ static int setij() {
 }
 
 static int refresh_noch() {
-	printf("\e[%zu;%zuH\e[J", home_i, home_j);
+	printf("\033[%zu;%zuH\033[J", home_i, home_j);
 
 	for(size_t a = 0; a < insertion_point; a++)
 		putchar(LCl_buffer[a]);
 
-	printf("\e[s\e[?25l%s", &LCl_buffer[insertion_point]);
+	printf("\033[s\033[?25l%s", &LCl_buffer[insertion_point]);
 
 	int ret = setij();
 	if(ret != LCL_OK) return ret;
 
-	printf("\e[u\e[?25h");
+	printf("\033[u\033[?25h");
 	return LCL_OK;
 }
 
@@ -244,17 +244,17 @@ static int refresh_postch() {
 	char ch = LCl_buffer[total_chars - 1];
 	LCl_buffer[total_chars - 1] = 0;
 
-	printf("\e[%zu;%zuH\e[J", home_i, home_j);
+	printf("\033[%zu;%zuH\033[J", home_i, home_j);
 
 	for(size_t a = 0; a < insertion_point; a++)
 		putchar(LCl_buffer[a]);
 
-	printf("\e[s\e[?25l%s", &LCl_buffer[insertion_point]);
+	printf("\033[s\033[?25l%s", &LCl_buffer[insertion_point]);
 
 	int ret = printchar(ch);
 	if(ret != LCL_OK) return ret;
 
-	printf("\e[u\e[?25h");
+	printf("\033[u\033[?25h");
 	LCl_buffer[total_chars - 1] = ch;
 	return LCL_OK;
 }
@@ -276,7 +276,7 @@ static int readchar() {
 	if(LCl_sigint) return LCL_INT;
 
 	switch(input) {
-	case '\e':
+	case '\033':
 		getch();
 		return escape_code(getch());
 
@@ -375,7 +375,7 @@ signed char LCl_readch() {
 	LCl_sigint = false;
 	char ch = getchar();
 
-	if(ch == '\e') ret = flush_ch();
+	if(ch == '\033') ret = flush_ch();
 	if(ret != LCL_OK) return cleanup_ch(LCLCH_ERR);
 
 	if(LCl_sigint) return cleanup_ch(LCLCH_INT);
@@ -404,9 +404,9 @@ static signed char cleanup_ch(char ret) {
 }
 
 static int flush_ch() {
-	printf("\e[6n");
+	printf("\033[6n");
 	char buffer = getchar();
-	while(buffer != '\e') buffer = getchar();
+	while(buffer != '\033') buffer = getchar();
 
 	size_t i, j;
 	int ret = scanf("[%zu;%zuR", &i, &j);

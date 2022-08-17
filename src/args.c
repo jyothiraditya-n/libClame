@@ -248,8 +248,8 @@ static int get_arr(LCv_t *var) {
 	*var -> len = len;
 
 	for(int l = ai; l < k; l++) {
-		sscanf(av[l], var -> fmt,
-			var -> data + (l - ai) * var -> size);
+		sscanf(av[l], var -> fmt, (void *)
+			((char *) var -> data + (l - ai) * var -> size));
 	}
 
 	if(end_marked) k++;

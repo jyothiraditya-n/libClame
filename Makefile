@@ -1,5 +1,5 @@
 # libClame: Command-line Arguments Made Easy
-# Copyright (C) 2021 Jyothiraditya Nellakra
+# Copyright (C) 2021-2022 Jyothiraditya Nellakra
 #
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,7 +25,7 @@ files += $(wildcard *.a)
 
 CLEAN = $(foreach file,$(files),rm $(file);)
 
-CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O3 -I inc/
+CFLAGS ?= -std=c99 -Wall -Wextra -Wpedantic -O3 -I inc/
 LD_LIBS ?= -L. -lClame
 
 $(objs) : %.o : %.c $(headers)
