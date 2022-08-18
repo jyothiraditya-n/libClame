@@ -38,14 +38,11 @@ static void print_ints();
 static void print_files();
 
 static void help_flag();
-static void init();
+static void init(int argc, char **argv);
 
 int main(int argc, char **argv) {
 	name = argv[0];
-	init();
-
-	int ret = LCa_read(argc, argv);
-	if(ret != LCA_OK) help(1);
+	init(argc, argv);
 
 	putchar('\n');
 	if(flag) puts("  The flag was set!\n");
@@ -134,7 +131,7 @@ static void help_flag() {
 	help(0);
 }
 
-static void init() {
+static void init(int argc, char **argv) {
 	LCa_t *arg = LCa_new();
 	arg -> long_flag = "about";
 	arg -> short_flag = 'a';
@@ -181,4 +178,7 @@ static void init() {
 
 	LCa_noflags = files;
 	LCa_max_noflags = 4096;
+
+	int ret = LCa_read(argc, argv);
+	if(ret != LCA_OK) help(1);
 }

@@ -77,23 +77,22 @@ static void about();
 static void help(int ret);
 
 static void help_flag();
-static void init();
+static void init(int argc, char **argv);
 
 static void on_interrupt(int signum);
 
 int main(int argc, char **argv) {
 	name = argv[0];
-	init();
+	init(argc, argv);
 
-	int ret = LCa_read(argc, argv);
-	if(ret != LCA_OK) help(1);
+	signal(SIGINT, on_interrupt);
 
 	LCe_banner = "libClame: Command-line Arguments Made Easy";
 	LCe_buffer = message;
 	LCe_length = 4096;
 	LCe_dirty = false;
 
-	ret = LCe_edit();
+	int ret = LCe_edit();
 	switch(ret) {
 	case LCE_OK:
 		if(LCe_dirty) printf("\033[H\033[J%s\n", message);
@@ -143,9 +142,7 @@ static void help_flag() {
 	help(0);
 }
 
-static void init() {
-	signal(SIGINT, on_interrupt);
-
+static void init(int argc, char **argv) {
 	LCa_t *arg = LCa_new();
 	arg -> long_flag = "about";
 	arg -> short_flag = 'a';
@@ -155,6 +152,9 @@ static void init() {
 	arg -> long_flag = "help";
 	arg -> short_flag = 'h';
 	arg -> pre = help_flag;
+
+	int ret = LCa_read(argc, argv);
+	if(ret != LCA_OK) help(1);
 }
 
 static void on_interrupt(int signum) {

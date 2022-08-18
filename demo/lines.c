@@ -34,17 +34,14 @@ static void about();
 static void help(int ret);
 
 static void help_flag();
-static void init();
+static void init(int argc, char **argv);
 
 static void read_message();
 static void on_interrupt(int signum);
 
 int main(int argc, char **argv) {
 	name = argv[0];
-	init();
-
-	int ret = LCa_read(argc, argv);
-	if(ret != LCA_OK) help(1);
+	init(argc, argv);
 
 	LCl_buffer = message;
 	LCl_length = 4096;
@@ -92,7 +89,7 @@ static void help_flag() {
 	help(0);
 }
 
-static void init() {
+static void init(int argc, char **argv) {
 	signal(SIGINT, on_interrupt);
 
 	LCa_t *arg = LCa_new();
@@ -114,6 +111,9 @@ static void init() {
 	arg -> short_flag = 'n';
 	arg -> var = var;
 	arg -> value = true;
+
+	int ret = LCa_read(argc, argv);
+	if(ret != LCA_OK) help(1);
 }
 
 static void read_message() {
