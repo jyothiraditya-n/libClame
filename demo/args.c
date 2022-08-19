@@ -23,22 +23,22 @@
 #include <LC_args.h>
 #include <LC_vars.h>
 
-static const char *name;
+const char *name;
 
-static bool flag = false;
-static char message[4096] = "";
-static int ints[4096];
-static size_t length;
+bool flag = false;
+char message[4096] = "";
+int ints[4096];
+size_t length;
 
-static const char *files[4096];
+const char *files[4096];
 
-static void about();
-static void help(int ret);
-static void print_ints();
-static void print_files();
+void about();
+void help(int ret);
+void print_ints();
+void print_files();
 
-static void help_flag();
-static void init(int argc, char **argv);
+void help_flag();
+void init(int argc, char **argv);
 
 int main(int argc, char **argv) {
 	name = argv[0];
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 	exit(0);
 }
 
-static void about() {
+void about() {
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
 	puts("  Copyright (C) 2021-2022 Jyothiraditya Nellakra\n");
@@ -76,7 +76,7 @@ static void about() {
 	exit(0);
 }
 
-static void help(int ret) {
+void help(int ret) {
 	putchar('\n');
 	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", name);
 
@@ -99,7 +99,7 @@ static void help(int ret) {
 	exit(ret);
 }
 
-static void print_ints() {
+void print_ints() {
 	printf("  Ints: ");
 
 	for(size_t i = 0; i < length; i++) {
@@ -111,7 +111,7 @@ static void print_ints() {
 	puts("\n");
 }
 
-static void print_files() {
+void print_files() {
 	printf("  Files: ");
 
 	size_t max_files;
@@ -127,11 +127,11 @@ static void print_files() {
 	puts("\n");
 }
 
-static void help_flag() {
+void help_flag() {
 	help(0);
 }
 
-static void init(int argc, char **argv) {
+void init(int argc, char **argv) {
 	LCa_t *arg = LCa_new();
 	arg -> long_flag = "about";
 	arg -> short_flag = 'a';

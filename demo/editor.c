@@ -26,8 +26,8 @@
 #include <LC_editor.h>
 #include <LC_vars.h>
 
-static const char *name;
-static char message[4096] = "\tYou can type something or the other here. "
+const char *name;
+char message[4096] = "\tYou can type something or the other here. "
 "The program will print it out when it exits. (Unless the program has broken "
 "down horribly or something else has gone very wrong.)\n\n"
 
@@ -73,13 +73,13 @@ static char message[4096] = "\tYou can type something or the other here. "
 "sapien. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices "
 "posuere cubilia curae; Duis id venenatis nisi.";
 
-static void about();
-static void help(int ret);
+void about();
+void help(int ret);
 
-static void help_flag();
-static void init(int argc, char **argv);
+void help_flag();
+void init(int argc, char **argv);
 
-static void on_interrupt(int signum);
+void on_interrupt(int signum);
 
 int main(int argc, char **argv) {
 	name = argv[0];
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 	}
 }
 
-static void about() {
+void about() {
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
 	puts("  Copyright (C) 2021-2022 Jyothiraditya Nellakra\n");
@@ -126,7 +126,7 @@ static void about() {
 	exit(0);
 }
 
-static void help(int ret) {
+void help(int ret) {
 	putchar('\n');
 	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", name);
 
@@ -138,11 +138,11 @@ static void help(int ret) {
 	exit(ret);
 }
 
-static void help_flag() {
+void help_flag() {
 	help(0);
 }
 
-static void init(int argc, char **argv) {
+void init(int argc, char **argv) {
 	LCa_t *arg = LCa_new();
 	arg -> long_flag = "about";
 	arg -> short_flag = 'a';
@@ -157,7 +157,7 @@ static void init(int argc, char **argv) {
 	if(ret != LCA_OK) help(1);
 }
 
-static void on_interrupt(int signum) {
+void on_interrupt(int signum) {
 	if(signum != SIGINT) {
 		signal(signum, SIG_DFL);
 		return;

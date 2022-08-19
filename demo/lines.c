@@ -26,18 +26,18 @@
 #include <LC_lines.h>
 #include <LC_vars.h>
 
-static const char *name;
-static char message[4096] = "";
-static bool no_ansi;
+const char *name;
+char message[4096] = "";
+bool no_ansi;
 
-static void about();
-static void help(int ret);
+void about();
+void help(int ret);
 
-static void help_flag();
-static void init(int argc, char **argv);
+void help_flag();
+void init(int argc, char **argv);
 
-static void read_message();
-static void on_interrupt(int signum);
+void read_message();
+void on_interrupt(int signum);
 
 int main(int argc, char **argv) {
 	name = argv[0];
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 	exit(0);
 }
 
-static void about() {
+void about() {
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
 	puts("  Copyright (C) 2021-2022 Jyothiraditya Nellakra\n");
@@ -71,7 +71,7 @@ static void about() {
 	exit(0);
 }
 
-static void help(int ret) {
+void help(int ret) {
 	putchar('\n');
 	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", name);
 
@@ -85,11 +85,11 @@ static void help(int ret) {
 	exit(ret);
 }
 
-static void help_flag() {
+void help_flag() {
 	help(0);
 }
 
-static void init(int argc, char **argv) {
+void init(int argc, char **argv) {
 	signal(SIGINT, on_interrupt);
 
 	LCa_t *arg = LCa_new();
@@ -116,7 +116,7 @@ static void init(int argc, char **argv) {
 	if(ret != LCA_OK) help(1);
 }
 
-static void read_message() {
+void read_message() {
 	int ret;
 
 	printf("Type a message!> ");
@@ -148,7 +148,7 @@ static void read_message() {
 	}
 }
 
-static void on_interrupt(int signum) {
+void on_interrupt(int signum) {
 	if(signum != SIGINT) {
 		signal(signum, SIG_DFL);
 		return;
