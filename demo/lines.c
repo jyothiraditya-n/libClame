@@ -73,7 +73,7 @@ void about() {
 
 void help(int ret) {
 	putchar('\n');
-	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", name);
+	printf("  Usage: %s [OPTIONS]\n\n", name);
 
 	puts("  Valid options are:");
 	puts("    -a, --about             print the about dialogue");

@@ -24,54 +24,16 @@
 
 #include <LC_args.h>
 #include <LC_editor.h>
+#include <LC_lines.h>
 #include <LC_vars.h>
 
 const char *name;
-char message[4096] = "\tYou can type something or the other here. "
-"The program will print it out when it exits. (Unless the program has broken "
-"down horribly or something else has gone very wrong.)\n\n"
 
-"\tLorem ipsum dolor sit amet, consectetur "
-"adipiscing elit. Morbi in augue tempor, pretium ante quis, condimentum nisi. "
-"Proin ornare auctor elit, a consectetur risus mattis sit amet. Mauris et "
-"vulputate neque. Vestibulum ante ipsum primis in faucibus orci luctus et "
-"ultrices posuere cubilia curae; Ut sed eros consectetur, ullamcorper purus "
-"sed, efficitur sem. Fusce suscipit suscipit lobortis. Fusce imperdiet "
-"ultricies risus a laoreet. Quisque sapien nibh, congue eu est in, "
-"sollicitudin scelerisque orci. Interdum et malesuada fames ac ante ipsum "
-"primis in faucibus. Sed rutrum in enim non iaculis. Cras vulputate elit "
-"commodo tempor blandit. Integer convallis at turpis id scelerisque. Nullam "
-"eu turpis in dolor porttitor elementum. Morbi et risus mauris. Vivamus a erat "
-"ut ipsum lobortis porta vitae a felis.\n\n"
+const char *input = NULL;
+char output[4096];
 
-"\tAenean quis tempus libero. Praesent elit ipsum, mollis quis laoreet et, "
-"malesuada at odio. Aliquam nisi turpis, mollis vel eleifend quis, efficitur "
-"pulvinar quam. Sed vehicula euismod nisl quis accumsan. Donec cursus sapien "
-"ex, at commodo arcu accumsan nec. Vivamus vehicula ex nec tellus tempor "
-"malesuada. Cras accumsan libero mi, vitae luctus felis posuere quis.\n\n"
-
-"\tVivamus in risus quam. Praesent molestie ut tellus in gravida. Suspendisse "
-"dolor nisi, pharetra facilisis faucibus at, dictum non enim. Vestibulum "
-"commodo, diam ac volutpat gravida, nisl mauris malesuada lacus, vitae "
-"scelerisque urna ligula eu eros. Aliquam a purus quam. Maecenas mattis, "
-"lacus et venenatis mollis, justo massa pulvinar mi, in commodo dui dolor ut "
-"elit. Vestibulum porta neque quis consequat tincidunt. Cras gravida, nibh "
-"nec mollis convallis, purus purus vehicula purus, et rutrum felis mi vitae "
-"ex. Nam sagittis nec libero a molestie. Morbi sit amet aliquam mi.\n\n"
-
-"\tIn elit metus, condimentum non ipsum eget, finibus scelerisque massa. "
-"Pellentesque aliquet sapien eu ligula venenatis, et congue leo vehicula. "
-"Morbi id tincidunt mauris. Integer nec accumsan tellus, vitae molestie "
-"turpis. Pellentesque habitant morbi tristique senectus et netus et malesuada "
-"fames ac turpis egestas. Maecenas ut aliquam sapien. Nulla in odio quis "
-"diam sodales finibus ac sed lorem. Integer volutpat dolor sed egestas "
-"bibendum. Morbi volutpat eros vehicula dolor porta, sit amet aliquet eros "
-"auctor. Quisque vulputate in justo ut lacinia. Pellentesque non nibh "
-"malesuada diam fringilla ullamcorper in quis nulla. Donec sodales "
-"condimentum risus, quis vehicula tellus porta in. Nunc sit amet dapibus "
-"justo. Ut dolor ipsum, fringilla sit amet suscipit eget, consequat et "
-"sapien. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices "
-"posuere cubilia curae; Duis id venenatis nisi.";
+char buffer[4096] = "\tYou can type something or the other here. The program "
+"will ask you to save it to a file when you're done.";
 
 void about();
 void help(int ret);
@@ -86,23 +48,89 @@ int main(int argc, char **argv) {
 	init(argc, argv);
 
 	signal(SIGINT, on_interrupt);
+	if(!input) goto next;
+	
+	FILE *file = fopen(input, "rb");
+	if(!file) {
+		fprintf(stderr, "%s: error: can't read file `%s'.\n", name, input);
+		exit(2);
+	}
 
-	LCe_banner = "libClame: Command-line Arguments Made Easy";
-	LCe_buffer = message;
+	size_t ret2 = fread(buffer, 1, 4096, file);
+	if(ret2 == 4096 && !feof(file)) {
+		fprintf(stderr, "%s: error: buffer smaller than file `%s'.\n", name, input);
+		exit(3);
+	}
+
+	memset(buffer + ret2, 0, 4096 - ret2);
+
+	int ret = fclose(file);
+	if(ret) {
+		fprintf(stderr, "%s: error: can't close file `%s'.\n", name, input);
+		exit(4);
+	}
+
+next:	LCe_banner = "libClame: Command-line Arguments Made Easy";
+	LCe_buffer = buffer;
 	LCe_length = 4096;
 	LCe_dirty = false;
 
-	int ret = LCe_edit();
-	switch(ret) {
-	case LCE_OK:
-		if(LCe_dirty) printf("\033[H\033[J%s\n", message);
-		else printf("\033[H\033[J");
-		exit(0);
-
-	case LCE_ERR:
+	ret = LCe_edit();
+	if(ret == LCL_ERR) {
 		fprintf(stderr, "%s: error: unknown error\n", name);
 		exit(1);
 	}
+
+	printf("\033[H\033[JSave changes? [Y/n]: ");
+
+	char ret3 = LCl_readch();
+
+	if(ret3 == LCLCH_ERR) exit(1);
+	else if((ret3 != 'Y' && ret3 != 'y') || ret3 == LCLCH_INT) exit(0);
+
+	LCl_buffer = output;
+	LCl_length = 4096;
+
+	if(input) { strncpy(output, input, 4095); goto end; }
+	printf("Filename: ");
+	ret = LCl_read();
+
+	switch(ret) {
+	case LCL_OK:
+		break;
+
+	case LCL_CUT:
+		fprintf(stderr, "%s: error: filename too long\n", name);
+		exit(1);
+
+	case LCL_INT:
+		printf("Cancelled.\n");
+		exit(0);
+
+	default:
+		fprintf(stderr, "%s: error: unknown error\n", name);
+		exit(1);
+	}
+
+end:	file = fopen(output, "w");
+	if(!file) {
+		fprintf(stderr, "%s: error: can't write file `%s'.\n", name, output);
+		exit(2);
+	}
+
+	ret = fprintf(file, "%s", buffer);
+	if(ret < 0) {
+		fprintf(stderr, "%s: error: can't write file `%s'.\n", name, output);
+		exit(2);
+	}
+
+	ret = fclose(file);
+	if(ret) {
+		fprintf(stderr, "%s: error: can't close file `%s'.\n", name, output);
+		exit(4);
+	}
+
+	return 0;
 }
 
 void about() {
@@ -128,7 +156,7 @@ void about() {
 
 void help(int ret) {
 	putchar('\n');
-	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", name);
+	printf("  Usage: %s [OPTIONS] [--] [FILE]\n\n", name);
 
 	puts("  Valid options are:");
 	puts("    -a, --about             print the about dialogue");
@@ -153,6 +181,9 @@ void init(int argc, char **argv) {
 	arg -> short_flag = 'h';
 	arg -> pre = help_flag;
 
+	LCa_noflags = &input;
+	LCa_max_noflags = 1;
+
 	int ret = LCa_read(argc, argv);
 	if(ret != LCA_OK) help(1);
 }
@@ -163,5 +194,7 @@ void on_interrupt(int signum) {
 		return;
 	}
 
+	signal(SIGINT, on_interrupt);
 	LCe_sigint = true;
+	LCl_sigint = true;
 }
