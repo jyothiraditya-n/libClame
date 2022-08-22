@@ -20,124 +20,81 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <signal.h>
-
 #include <LC_args.h>
-#include <LC_editor.h>
-#include <LC_lines.h>
+#include <LC_files.h>
 #include <LC_vars.h>
 
 const char *name;
 
-const char *input = NULL;
-char output[4096];
+int ints[4096];
+size_t length;
+bool flag;
 
-char buffer[4096] = "\tYou can type something or the other here. The program "
-"will ask you to save it to a file when you're done.";
+const char *input;
+char output[4096];
 
 void about();
 void help(int ret);
+void print_ints();
+void print_files();
 
 void help_flag();
 void init(int argc, char **argv);
 
-void on_interrupt(int signum);
-
 int main(int argc, char **argv) {
 	name = argv[0];
 	init(argc, argv);
+	LCv_clear();
 
-	signal(SIGINT, on_interrupt);
-	if(!input) goto next;
-	
-	FILE *file = fopen(input, "rb");
-	if(!file) {
-		fprintf(stderr, "%s: error: can't read file `%s'.\n", name, input);
-		exit(2);
+	LCv_t *var = LCv_new();
+	var -> id = "flag";
+	var -> data = &flag;
+	var -> size = sizeof(bool);
+
+	var = LCv_new();
+	var -> id = "ints";
+	var -> data = ints;
+	var -> len = &length;
+	var -> min_len = 0;
+	var -> max_len = 4096;
+	var -> size = sizeof(int);
+
+	LCf_program_name = "LCf_demo";
+	LCf_program_ver = 1;
+	LCf_program_subver = 0;
+
+	if(input) {
+		int ret = LCf_read(input);
+		if(ret != LCF_OK) {
+			fprintf(stderr, "%s: error: error reading file `%s'.\n",
+				name, input);
+			exit(1);
+		}
 	}
 
-	size_t ret2 = fread(buffer, 1, 4096, file);
-	if(ret2 == 4096 && !feof(file)) {
-		fprintf(stderr, "%s: error: buffer smaller than file `%s'.\n", name, input);
-		exit(3);
+	putchar('\n');
+	if(flag) puts("  The flag was set!\n");
+	else puts("  The flag wasn't set.\n");
+
+	if(length) print_ints();
+
+	if(strlen(output)) {
+		int ret = LCf_save(output);
+		if(ret != LCF_OK) {
+			fprintf(stderr, "%s: error: error saving file `%s'.\n",
+				name, output);
+			exit(1);
+		}
 	}
 
-	memset(buffer + ret2, 0, 4096 - ret2);
-
-	int ret = fclose(file);
-	if(ret) {
-		fprintf(stderr, "%s: error: can't close file `%s'.\n", name, input);
-		exit(4);
-	}
-
-next:	LCe_banner = "libClame: Command-line Arguments Made Easy";
-	LCe_buffer = buffer;
-	LCe_length = 4096;
-	LCe_dirty = false;
-
-	ret = LCe_edit();
-	if(ret == LCL_ERR) {
-		fprintf(stderr, "%s: error: unknown error\n", name);
-		exit(1);
-	}
-
-	printf("\033[H\033[JSave changes? [Y/n]: ");
-
-	char ret3 = LCl_readch();
-
-	if(ret3 == LCLCH_ERR) exit(1);
-	else if((ret3 != 'Y' && ret3 != 'y') || ret3 == LCLCH_INT) exit(0);
-
-	LCl_buffer = output;
-	LCl_length = 4096;
-
-	if(input) { strncpy(output, input, 4095); goto end; }
-	printf("Filename: ");
-	ret = LCl_read();
-
-	switch(ret) {
-	case LCL_OK:
-		break;
-
-	case LCL_CUT:
-		fprintf(stderr, "%s: error: filename too long\n", name);
-		exit(1);
-
-	case LCL_INT:
-		printf("Cancelled.\n");
-		exit(0);
-
-	default:
-		fprintf(stderr, "%s: error: unknown error\n", name);
-		exit(1);
-	}
-
-end:	file = fopen(output, "w");
-	if(!file) {
-		fprintf(stderr, "%s: error: can't write file `%s'.\n", name, output);
-		exit(2);
-	}
-
-	ret = fprintf(file, "%s", buffer);
-	if(ret < 0) {
-		fprintf(stderr, "%s: error: can't write file `%s'.\n", name, output);
-		exit(2);
-	}
-
-	ret = fclose(file);
-	if(ret) {
-		fprintf(stderr, "%s: error: can't close file `%s'.\n", name, output);
-		exit(4);
-	}
-
-	return 0;
+	exit(0);
 }
 
 void about() {
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
 	puts("  Copyright (C) 2021-2022 Jyothiraditya Nellakra");
-	puts("  Demonstration Program for <LC_editor.h>\n");
+	puts("  Demonstration Program for <LC_files.h>\n");
 
 	puts("  This program is free software: you can redistribute it and/or modify");
 	puts("  it under the terms of the GNU General Public License as published by");
@@ -163,8 +120,27 @@ void help(int ret) {
 	puts("    -a, --about             print the about dialogue");
 	puts("    -h, --help              print this help dialogue\n");
 
+	puts("    -f, --flag              set the flag");
+	puts("    -o, --output FILE       set the output file");
+	puts("    -i, --ints INTS... [--] set the ints\n");
+
+	puts("  Note: The file specified without a flag is the input file and -o specifies");
+	puts("        the output file.\n");
+
 	puts("  Happy coding! :)\n");
 	exit(ret);
+}
+
+void print_ints() {
+	printf("  Ints: ");
+
+	for(size_t i = 0; i < length; i++) {
+		printf("%d", ints[i]);
+
+		if(i + 1 < length) printf(", ");
+	}
+
+	puts("\n");
 }
 
 void help_flag() {
@@ -182,20 +158,43 @@ void init(int argc, char **argv) {
 	arg -> short_flag = 'h';
 	arg -> pre = help_flag;
 
+	LCv_t *var = LCv_new();
+	var -> id = "flag";
+	var -> data = &flag;
+
+	arg = LCa_new();
+	arg -> long_flag = "flag";
+	arg -> short_flag = 'f';
+	arg -> var = var;
+	arg -> value = true;
+
+	var = LCv_new();
+	var -> id = "output";
+	var -> fmt = "%4095[^\t\n]";
+	var -> data = output;
+
+	arg = LCa_new();
+	arg -> long_flag = "output";
+	arg -> short_flag = 'o';
+	arg -> var = var;
+
+	var = LCv_new();
+	var -> id = "ints";
+	var -> fmt = "%d";
+	var -> data = ints;
+	var -> len = &length;
+	var -> min_len = 0;
+	var -> max_len = 4096;
+	var -> size = sizeof(int);
+
+	arg = LCa_new();
+	arg -> long_flag = "ints";
+	arg -> short_flag = 'i';
+	arg -> var = var;
+
 	LCa_noflags = &input;
 	LCa_max_noflags = 1;
 
 	int ret = LCa_read(argc, argv);
 	if(ret != LCA_OK) help(1);
-}
-
-void on_interrupt(int signum) {
-	if(signum != SIGINT) {
-		signal(signum, SIG_DFL);
-		return;
-	}
-
-	signal(SIGINT, on_interrupt);
-	LCe_sigint = true;
-	LCl_sigint = true;
 }

@@ -58,7 +58,8 @@ int main(int argc, char **argv) {
 void about() {
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
-	puts("  Copyright (C) 2021-2022 Jyothiraditya Nellakra\n");
+	puts("  Copyright (C) 2021-2022 Jyothiraditya Nellakra");
+	puts("  Demonstration Program for <LC_args.h>\n");
 
 	puts("  This program is free software: you can redistribute it and/or modify");
 	puts("  it under the terms of the GNU General Public License as published by");

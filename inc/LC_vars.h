@@ -41,4 +41,6 @@ extern LCv_t *LC_vars;
 extern LCv_t *LCv_new();
 extern LCv_t *LCv_get(const char *id);
 
+extern void LCv_clear();
+
 #endif

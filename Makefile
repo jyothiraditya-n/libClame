@@ -18,23 +18,28 @@ headers = $(wildcard inc/*.h)
 objs = $(patsubst %.c,%.o,$(wildcard src/*.c))
 
 demos = $(patsubst demo/%.c,%,$(wildcard demo/*.c))
+demo_objs = $(patsubst %.c,%.o,$(wildcard demo/*.c))
 
-files = $(foreach file,$(objs),$(wildcard $(file)))
+files = $(foreach file,$(objs) $(demo_objs),$(wildcard $(file)))
 files += $(foreach file,$(demos),$(wildcard $(file)))
 files += $(wildcard *.a)
 
 CLEAN = $(foreach file,$(files),rm $(file);)
 
-CFLAGS ?= -std=c99 -Wall -Wextra -Wpedantic -O3 -I inc/
+CPPFLAGS += -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O3
+CFLAGS += -std=c99 -O3 -s
 LD_LIBS ?= -L. -lClame
 
 $(objs) : %.o : %.c $(headers)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) -c $< -o $@
 
 libClame.a : $(objs)
 	$(AR) -r libClame.a $(objs)
 
-$(demos) : % : demo/%.c libClame.a
+$(demo_objs) : %.o : %.c $(headers)
+	$(CC) $(CPPFLAGS) -c $< -o $@
+
+$(demos) : % : demo/%.o libClame.a
 	$(CC) $(CFLAGS) $< -o $@ $(LD_LIBS)
 
 .DEFAULT_GOAL = all

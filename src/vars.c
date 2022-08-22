@@ -53,3 +53,15 @@ LCv_t *LCv_get(const char *id) {
 
 	return var;
 }
+
+void LCv_clear() {
+	LCv_t *var = LC_vars;
+
+	while(var) {
+		LCv_t *next = var -> next;
+		free(var);
+		var = next;
+	}
+
+	LC_vars = NULL;
+}

@@ -49,10 +49,16 @@ static int read_native(FILE *file, size_t size) {
 
 	free(id);
 
-loop:	if(feof(file)) return LCF_OK;
+loop:	ret = fread(&len, size, 1, file);
+	if(ret != 1) {
+		if(feof(file)) {
+			int ret = fclose(file);
+			if(ret == EOF) return LCF_FILEIO_ERR;
+			else return LCF_OK;
+		}
 
-	ret = fread(&len, size, 1, file);
-	if(ret != 1) { fclose(file); return LCF_FILEIO_ERR; }
+		fclose(file); return LCF_FILEIO_ERR;
+	}
 
 	id = malloc(len + 1);
 	ret = fread(id, len, 1, file);
@@ -63,6 +69,8 @@ loop:	if(feof(file)) return LCF_OK;
 	if(!var) { fclose(file); free(id); return LCF_BAD_VAR; }
 	else free(id);
 
+	if(!var -> len) { len = 1; goto next; }
+
 	ret = fread(&len, size, 1, file);
 	if(ret != 1) { fclose(file); return LCF_FILEIO_ERR; }
 
@@ -71,9 +79,10 @@ loop:	if(feof(file)) return LCF_OK;
 		return LCF_BAD_LEN;
 	}
 
-	ret = fread(var -> data, var -> size, len, file);
+next:	ret = fread(var -> data, var -> size, len, file);
 	if(ret != len) { fclose(file); return LCF_FILEIO_ERR; }
-	else *(var -> len) = len;
+	
+	if(var -> len) *(var -> len) = len;
 
 	goto loop;
 }
@@ -96,10 +105,17 @@ static int read_64on32(FILE *file) {
 
 	free(id);
 
-loop:	if(feof(file)) return LCF_OK;
+loop:	ret = fread(lens, 4, 1, file);
+	if(ret != 1) {
+		if(feof(file)) {
+			int ret = fclose(file);
+			if(ret == EOF) return LCF_FILEIO_ERR;
+			else return LCF_OK;
+		}
 
-	ret = fread(lens, 4, 1, file);
-	if(ret != 1) { fclose(file); return LCF_FILEIO_ERR; }
+		fclose(file); return LCF_FILEIO_ERR;
+	}
+	
 	if(lens[1]) { fclose(file); return LCF_BAD_ARCH; }
 
 	id = malloc(lens[0] + 1);
@@ -111,6 +127,8 @@ loop:	if(feof(file)) return LCF_OK;
 	if(!var) { fclose(file); free(id); return LCF_BAD_VAR; }
 	else free(id);
 
+	if(!var -> len) { lens[0] = 1; goto next; }
+
 	ret = fread(lens, 4, 1, file);
 	if(ret != 1) { fclose(file); return LCF_FILEIO_ERR; }
 	if(lens[1]) { fclose(file); return LCF_BAD_ARCH; }
@@ -120,9 +138,10 @@ loop:	if(feof(file)) return LCF_OK;
 		return LCF_BAD_LEN;
 	}
 
-	ret = fread(var -> data, var -> size, lens[0], file);
+next:	ret = fread(var -> data, var -> size, lens[0], file);
 	if(ret != lens[0]) { fclose(file); return LCF_FILEIO_ERR; }
-	else *(var -> len) = lens[0];
+	
+	if(var -> len) *(var -> len) = lens[0];
 
 	goto loop;
 }
@@ -247,7 +266,7 @@ int LCf_save(const char *filename) {
 	}
 
 	int ret2 = fclose(file);
-	if(ret2) return LCF_FILEIO_ERR;
+	if(ret2 == EOF) return LCF_FILEIO_ERR;
 
 	return LCF_OK;
 }
