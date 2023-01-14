@@ -1,5 +1,5 @@
 /* libClame: Command-line Arguments Made Easy
- * Copyright (C) 2021 Jyothiraditya Nellakra
+ * Copyright (C) 2021-2023 Jyothiraditya Nellakra
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -14,247 +14,136 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
-#include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <LC_args.h>
-#include <LC_vars.h>
 
-LCa_t *LC_args;
-const char **LCa_noflags;
-size_t LCa_max_noflags;
+/* Create the symbols for the variables that are externed in the header; set
+ * counts to zero and pointers to NULL. */
 
-static int proc_cmd();
+LCa_t *LC_args = NULL;
+size_t LC_args_length = 0;
 
-static int proc_lflag();
-static int proc_noflag();
-static int proc_sflag(char c);
+const char **LCa_flagless_args = NULL;
+size_t LCa_flagless_args_length = 0;
 
-static int proc_arg(LCa_t *arg);
-static int proc_var(LCa_t *arg);
+int (*LCa_err_function)() = NULL;
+int LCa_errno = 0;
 
-static int get_val(LCv_t *var);
-static int get_arr(LCv_t *var);
+/* We'll hold the arguments in a linked list and remove them as we process them
+ * so that only the flagless arguments are left in the end. */
 
-static int ac;
-static char **av;
-static int ai;
-static size_t aj, aj_max;
+typedef struct node_s {
+	/* A singly linked list is sufficient for our purposes. */
+	struct node_s *next;
 
-static size_t noflags;
+	/* The type of a command-line argument is a pointer to a null-
+	 * terminated string. */
+	const char *string; 
 
-LCa_t *LCa_new() {
-	LCa_t *new = malloc(sizeof(LCa_t));
-	if(!new) return NULL;
+} node_t;
 
-	new -> next = LC_args;
-	new -> short_flag = 0;
-	new -> long_flag = "";
+/* We'll need a root node for our linked list, and we'll want a pointer to the
+ * node we are currently processing, as that'll need to be referenced and
+ * modified across multiple subroutines. */
 
-	new -> pre = NULL;
-	new -> post = NULL;
-	new -> var = NULL;
-	new -> value = false;
+static node_t root;
+static node_t *current;
 
-	LC_args = new;
-	return new;
-}
+/* There is only one function of ours that's visible to things outside of this
+ * translation unit. We'll want some helper functions to reduce the complexity
+ * of the beast, but we'll declare them here and define them later. */
+
+static int evaluate_argument();
+static LCa_t *find_flag(const char *lflag, char sflag);
 
 int LCa_read(int argc, char **argv) {
-	ac = argc;
-	av = argv;
-
-	bool no_more_flags = false;
-
-	for(ai = 1; ai < argc; ai++) {
-		if(!no_more_flags && !strcmp(av[ai], "--")) {
-			no_more_flags = true;
-			continue;
-		}
-
-		int ret = no_more_flags ? proc_noflag() : proc_cmd();
-		if(ret != LCA_OK) return ret;
+	/* If there's any previously allocated array of flagless arguments,
+	 * clear it before we add things to it to prevent a memory leak. */
+	if(LCa_flagless_args) {
+		free(LCa_flagless_args);
+		LCa_flagless_args = NULL; // Prevent a double-free.
 	}
 
-	return LCA_OK;
-}
+	/* Bail if the LC_args array is not properly set up. */
+	if(!LC_args) return LCA_NO_ARGS;
 
-static int proc_cmd() {
-	aj_max = strlen(av[ai]);
-	
-	if(!strcmp(av[ai], "-")) return proc_noflag();
+	/* Push the arguments onto the root node in from first to last. */
+	LCa_flagless_args_length = 0;
+	current = &root;
 
-	if(av[ai][0] != '-') return proc_noflag();
-	if(av[ai][1] == '-') return proc_lflag();
+	for(int i = 0; i < argc; i++) {
+		LCa_flagless_args_length++;
 
-	int i = ai;
+		/* Get the reference to the argument. */
+		current -> string = argv[i];
 
-	for(aj = 1; aj < aj_max; aj++) {
-		int ret = proc_sflag(av[i][aj]);
-		if(ret != LCA_OK) return ret;
-	}
+		/* If there's no more arguments, bail without allocating
+		 * memory. */
+		if(i == argc - 1) break;
 
-	aj = 0;
-	return LCA_OK;
-}
-
-static int proc_lflag() {
-	LCa_t *arg;
-	for(arg = LC_args; arg; arg = arg -> next) {
-		if(!strcmp(av[ai] + 2, arg -> long_flag)) break;
-	}
-
-	if(!arg) {
-		fprintf(stderr, "%s: error: unknown flag '%s'.\n",
-			av[0], av[ai]);
-
-		return LCA_BAD_FLAG;
-	}
-
-	return proc_arg(arg);
-}
-
-static int proc_noflag() {
-	if(!LCa_noflags) {
-		fprintf(stderr, "%s: error: argument '%s' does not have a "
-			"flag.\n", av[0], av[ai]);
-
-		return LCA_NO_FLAG;
-	}
-
-	if(noflags < LCa_max_noflags) {
-		LCa_noflags[noflags] = av[ai];
-		noflags++;
-
-		return LCA_OK;
-	}
-
-	fprintf(stderr, "%s: error: too many flagless arguments.\n", av[0]);
-	return LCA_NO_FLAG;
-}
-
-static int proc_sflag(char c) {
-	LCa_t *arg;
-	for(arg = LC_args; arg; arg = arg -> next) {
-		if(c == arg -> short_flag) break;
-	}
-
-	if(!arg) {
-		fprintf(stderr, "%s: error: unknown flag '%c'.\n", av[0], c);
-		return LCA_BAD_FLAG;
-	}
-
-	return proc_arg(arg);
-}
-
-static int proc_arg(LCa_t *arg) {
-	if(arg -> pre) arg -> pre();
-
-	if(arg -> var) {
-		int ret = proc_var(arg);
-		if(ret != LCA_OK) return ret;
-	}
-
-	if(arg -> post) arg -> post();
-	return LCA_OK;
-}
-
-static int proc_var(LCa_t *arg) {
-	LCv_t *var = arg -> var;
-
-	if(var -> dirty) {
-		fprintf(stderr, "%s: error: variable '%s' has already "
-			"been set.\n", av[0], var -> id);
-
-		return LCA_VAR_RESET;
-	}
-
-	if(!strcmp(var -> fmt, "") && !var -> len) {
-		*(bool *) var -> data = arg -> value;
+		/* Allocate the memory for the next argument. */
+		current -> next = malloc(sizeof(node_t));
+		if(!current -> next) return LCA_MALLOC_ERR;
 		
-		var -> dirty = true;
-		return LCA_OK;
+		current = current -> next;
+		current -> next = NULL;
 	}
 
-	int ret = get_val(var);
-	if(ret != LCA_OK) return ret;
+	/* Evaluate every argument, autoforward through the list of arguments
+	 * and if we get any errors, pass it back up the call stack. */
+	for(current = &root; current; current = current -> next) {
+		int ret = evaluate_argument();
+		if(ret != LCA_OK) return ret;
+	}
+
+	/* At this point all that's left is getting an array for the flagless
+	 * arguments and deallocating the list. */
+
+	LCa_flagless_args = malloc(sizeof(const char *)
+		* LCa_flagless_args_length);
+	if(!LCa_flagless_args) return LCA_MALLOC_ERR;
+
+	/* Loop through the linked list to copy the references and deallocate
+	 * the nodes as we go along. */
+	node_t *delete = &root;
+	current = &root;
+
+	for(size_t i = 0; i < LCa_flagless_args_length; i++) {
+		LCa_flagless_args[i] = current -> string;
+
+		/* This process will exit having left current as a NULL
+		 * pointer, which is pretty convenient. */
+		delete = current;
+		current = current -> next;
+
+		/* Don't delete the root node, as that's static allocation. */
+		if(delete != &root) free(delete);
+	}
 
 	return LCA_OK;
 }
 
-static int get_val(LCv_t *var) {
-	if(var -> len) return get_arr(var);
-	int ret = 0;
-
-	if(aj && aj + 1 < aj_max) {
-		ret = sscanf(av[ai] + aj + 1, var -> fmt, var -> data);
-		aj = aj_max;
-		goto end;
-	}
-
-	if(ai + 1 == ac) {
-		fprintf(stderr, "%s: error: value for variable '%s' "
-			"not provided.\n", av[0], var -> id);
-
-		return LCA_NO_VAL;
-	}
-
-	ai++;
-	ret = sscanf(av[ai], var -> fmt, var -> data);
-
-end:	if(ret != 1) {
-		fprintf(stderr, "%s: error: '%s' is not a valid value "
-			"for variable '%s'.\n", av[0], av[ai] , var -> id);
-
-		return LCA_BAD_VAL;
-	}
-
-	var -> dirty = true;
+static int evaluate_argument() {
 	return LCA_OK;
 }
 
-static int get_arr(LCv_t *var) {
-	bool end_marked = false;
+static LCa_t *find_flag(const char *lflag, char sflag) {
+	/* Loop over the arguments we have in the array, and for each of them
+	 * see if the short flags match. Else, spend the time it'll take to
+	 * check if the long flag strings match. */
 
-	int k;
-	for(k = ai + 1; k < ac; k++) {
-		if(!strcmp(av[k], "--")) {
-			end_marked = true;
-			break;
-		}
+	for(size_t i = 0; i < LC_args_length; i++) {
+		if(sflag == LC_args[i].short_flag) return &LC_args[i];
 
-		int ret = sscanf(av[k], var -> fmt, var -> data);
-		if(ret != 1) break;
+		if(!lflag) continue; // Don't pass any null pointer to strcmp.
+		if(!LC_args[i].long_flag) continue;
+
+		if(!strcmp(lflag, LC_args[i].long_flag)) return &LC_args[i];
 	}
 
-	ai++; size_t len = k - ai;
-
-	if(len < var -> min_len) {
-		fprintf(stderr, "%s: error: too few values for array '%s'.\n",
-			av[0], var -> id);
-
-		return LCA_MORE_VALS;
-	}
-
-	if(len > var -> max_len) {
-		fprintf(stderr, "%s: error: too many arguments "
-			"for array '%s'.\n", av[0], var -> id);
-
-		return LCA_LESS_VALS;
-	}
-
-	*var -> len = len;
-
-	for(int l = ai; l < k; l++) {
-		sscanf(av[l], var -> fmt, (void *)
-			((char *) var -> data + (l - ai) * var -> size));
-	}
-
-	if(end_marked) k++;
-
-	ai = k - 1;
-	var -> dirty = true;
-	return LCA_OK;
+	/* Return NULL if no argument with either the specified short or long
+	 * flag were found. */
+	return NULL;
 }
