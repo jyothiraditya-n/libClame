@@ -22,9 +22,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Each argument that we process has properties specified by an LCa_t struct.
- * A run down of what all of the properties do and mean is written in the
- * comments within the structure definition itself. */
+/* Version Information */
+#define LCA_VERSION 1 /* Incremented when backwards compatibility broken. */
+#define LCA_SUBVERSION 0 /* Incremented when new features added. */
+
+/* Each argument that we process has properties specified by an LCa_flag_t
+ * struct. A run down of what all of the properties do and mean is written in
+ * the comments within the structure definition itself. */
 
 typedef struct {
 	/* The long flag is what you specify when you type `--<something>`
@@ -61,7 +65,7 @@ typedef struct {
 	 * pointer to the start of a null-terminated set of characters in
 	 * memory) we can set the pointer for you directly without needing a
 	 * format string to pass to sscanf. In this case, var_ptr is
-	 * transparently treated as a (const char *)* type. We can also set a
+	 * transparently treated as a (char *)* type. We can also set a
 	 * boolean value directly to the value in bool_value, wherein var_ptr
 	 * is of type (bool *). */
 
@@ -102,19 +106,21 @@ typedef struct {
 
 	bool readonly; // Set this to false by default.
 
-} LCa_t;
+} LCa_flag_t;
 
 /* You'll want to set the pointer to point to the start of an array containing
  * the parameters for your programs command-line arguments. Then, set the size
  * variable to make sure we don't run off the end of the array's data range. */
 
-extern LCa_t *LC_args;
+extern LCa_flag_t *LC_args;
 extern size_t LC_args_length;
 
 /* Once you have set up the variables above, you can call the LCa_read function
  * to process your command line arguments. */
 
 extern int LCa_read(int argc, char **argv);
+
+/* The following are the menaings of the returned values from LCa_read(). */
 
 #define LCA_OK 0 // No errors occurred.
 #define LCA_NO_ARGS 1 // LC_args is a NULL pointer.
@@ -126,18 +132,24 @@ extern int LCa_read(int argc, char **argv);
 #define LCA_BAD_VAL 6 // A malformed value was supplied.
 #define LCA_LESS_VALS 7 // Fewer values were supplied than the flag accepts.
 #define LCA_MORE_VALS 8 // More values were supplied than the flag accepts.
+#define LCA_FUNC_ERR 9 // A user-defined function returned an error.
+
+#define LCA_BAD_VAR_TYPE 10 // The specified flag var_type is invalid.
 
 /* These variables are set by the LCa_read() function when it encounters
  * arguments supplied to the program that were not preceded by a flag. */
 
-extern const char **LCa_flagless_args;
+extern char **LCa_flagless_args;
 extern size_t LCa_flagless_args_length;
+
+/* We also get the program name out of argv[0]. */
+extern char *LCa_prog_name;
 
 /* These variables are set by the LCa_read() function if a user-defined
  * function returned an error code of some sort. */
 
 extern int (*LCa_err_function)();
-extern int LCa_errno;
+extern int LCa_function_errno;
 
 /* End Header Guard */
 #endif

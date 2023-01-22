@@ -19,11 +19,6 @@
 
 #include <LC_args.h>
 
-/* It's useful to have a global variable in your code for storing the name of
- * the executable your program was called by on the command line. This is
- * always supplied in argv[0]. */
-const char *name;
-
 /* We have some different variables to demonstrate the things that the library
  * can handle, as well as the way that someone might go about implementing
  * the library to handle them into their codebase. */
@@ -31,7 +26,7 @@ const char *name;
 /* The flag and the message are cool because they're datatypes that we handle
  * directly: booleans and null-terminated strings. */
 bool flag = false;
-const char *message = NULL;
+char *message = NULL;
 
 /* We need to pass ints through sscanf() and so this will get entered a little
  * differently. However, it also demonstrates how arrays work. */
@@ -45,7 +40,7 @@ size_t coords_length = 0;
 
 /* And this is to get all the args on the command line that were specified
  * without preceding flags. */
-const char **files;
+char **files;
 size_t files_length;
 
 /* These helper functions are specified as part of the arguments structure. */
@@ -59,7 +54,7 @@ void help_and_return(int ret);
 
 /* We want an array of the structure for the arguments. This can be specified,
  * as shown here, within c syntax. */
-LCa_t args[] = {
+LCa_flag_t args[] = {
 	/* The variables are: long_flag, short_flag, function, var_name,
 	 * var_ptr, var_type, value, fmt_string, arr_length, var_length,
 	 * min_arr_length, max_arr_length, readonly. */
@@ -85,20 +80,16 @@ LCa_t args[] = {
 		&ints_length, sizeof(int), 0, SIZE_MAX, false},
 
 	/* --coords, -c COORDS: set the coords. (2 or 3 values only.) */
-	{"coords", 'c', NULL, "coords", &coords, LCA_OTHER_VAR, false, "%f",
+	{"coords", 'c', NULL, "coords", &coords, LCA_OTHER_VAR, false, "%lf",
 		&coords_length, sizeof(double), 2, 3, false}
 };
 
 int main(int argc, char **argv) {
 	/* Set the LC_args array to the one that we have, and get the number of
 	 * entries automatically using sizeof. */
-	LC_args_length = sizeof(args) / sizeof(LCa_t);
+	LC_args_length = sizeof(args) / sizeof(LCa_flag_t);
 	LC_args = args;
 	
-	/* Get our program name. We'll need it early in case LCA decides to 
-	 * call our help function. */
-	name = argv[0];
-
 	/* Get the library to process our args and print out the help dialogue
 	 * on a non-system (usage) error. If there is a memory error, then go
 	 * ahead and print out an appropriate error message. */
@@ -108,8 +99,8 @@ int main(int argc, char **argv) {
 	case LCA_OK: break;
 
 	case LCA_MALLOC_ERR:
-		printf("%s: error allocating memory.\n", name);
-		perror(name); // Prints a more precise report from the cstdlib.
+		printf("%s: error allocating memory.\n", LCa_prog_name);
+		perror(LCa_prog_name); // More precise report from cstdlib.
 		break;
 
 	default:
@@ -123,11 +114,11 @@ int main(int argc, char **argv) {
 
 	/* The flag is set to either true or false, so set or unset. The
 	 * message is just a boring old string. */
-	printf("\n  Flag: %s\n\n", flag? "set": "unset");
+	printf("\n  Flag: %s\n", flag? "set": "unset");
 
 	/* Check that the message is not NULL as we don't want to pass a NULL
 	 * to printf if the message has not been set. */
-	if(message) printf("  Message: %s\n\n", message);
+	if(message) printf("  Message: %s\n", message);
 	
 	/* The integers, coords and files all follow the same pattern, where
 	 * we just want to print them out as a list following a header and then
@@ -141,13 +132,13 @@ int main(int argc, char **argv) {
 		if(i + 1 < ints_length) printf(", ");
 	}
 
-	printf("\n\n  Coords: ");
+	printf("\n  Coords: ");
 	for(size_t i = 0; i < coords_length; i++) {
-		printf("%f", coords[i]);
+		printf("%lf", coords[i]);
 		if(i + 1 < coords_length) printf(", ");
 	}
 
-	printf("\n\n  Files: ");
+	printf("\n  Files: ");
 	for(size_t i = 0; i < files_length; i++) {
 		printf("%s", files[i]);
 		if(i + 1 < files_length) printf(", ");
@@ -160,7 +151,7 @@ int main(int argc, char **argv) {
 int about_flag() {
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
-	puts("  Copyright (C) 2021-2022 Jyothiraditya Nellakra");
+	puts("  Copyright (C) 2021-2023 Jyothiraditya Nellakra");
 	puts("  Demonstration Program for <LC_args.h>\n");
 
 	puts("  This program is free software: you can redistribute it and/or modify");
@@ -187,16 +178,16 @@ int help_flag() {
 
 void help_and_return(int ret) {
 	putchar('\n');
-	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", name);
+	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", LCa_prog_name);
 
 	puts("  Valid options are:");
 	puts("    -a, --about  print the about dialogue");
 	puts("    -h, --help   print this help dialogue\n");
 
-	puts("    -f, --flag                 set the flag");
-	puts("    -m, --message MESSAGE      set the message to MESSAGE");
-	puts("    -i, --ints INTS... [--]    set the ints to INTS");
-	puts("    -c, --cords COORDS... [--] set the coords to COORDS\n");
+	puts("    -f, --flag                  set the flag");
+	puts("    -m, --message MESSAGE       set the message to MESSAGE");
+	puts("    -i, --ints INTS... [--]     set the ints to INTS");
+	puts("    -c, --coords COORDS... [--] set the coords to COORDS\n");
 
 	puts("  Note: A '--' before [FILES] signifies the end of the options. Any");
 	puts("        options found after it will be treated as filenames.\n");

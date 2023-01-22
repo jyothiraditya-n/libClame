@@ -1,5 +1,5 @@
 # libClame: Command-line Arguments Made Easy
-# Copyright (C) 2021-2022 Jyothiraditya Nellakra
+# Copyright (C) 2021-2023 Jyothiraditya Nellakra
 #
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -14,38 +14,63 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
-headers = $(wildcard inc/*.h)
-objs = $(patsubst %.c,%.o,$(wildcard src/*.c))
+cheaders = $(wildcard inc/*.h)
+cobjs = $(patsubst %.c,%.o,$(wildcard src/*.c))
+ccobjs = $(patsubst %.cc,%.o,$(wildcard src/*.cc))
 
-demos = $(patsubst demo/%.c,%,$(wildcard demo/*.c))
-demo_objs = $(patsubst %.c,%.o,$(wildcard demo/*.c))
+ccheaders = $(wildcard inc/libClame/*.h)
+cdemos = $(patsubst demo/%.c,%,$(wildcard demo/*.c))
+cdemo_objs = $(patsubst %.c,%.o,$(wildcard demo/*.c))
 
-files = $(foreach file,$(objs) $(demo_objs),$(wildcard $(file)))
-files += $(foreach file,$(demos),$(wildcard $(file)))
+ccdemos = $(patsubst demo/%.cc,%,$(wildcard demo/*.cc))
+ccdemo_objs = $(patsubst %.cc,%.o,$(wildcard demo/*.cc))
+
+files = $(foreach file,$(cobjs) $(cdemo_objs),$(wildcard $(file)))
+files += $(foreach file,$(ccobjs) $(ccdemo_objs),$(wildcard $(file)))
+files += $(foreach file,$(cdemos),$(wildcard $(file)))
+files += $(foreach file,$(ccdemos),$(wildcard $(file)))
 files += $(wildcard *.a)
 
 CLEAN = $(foreach file,$(files),rm $(file);)
 
-CPPFLAGS += -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O3
-CFLAGS += -std=c99 -O3 -s
+ifneq ($(DEBUG),)
+	CPPFLAGS = -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O0 -g
+	CFLAGS = -std=c99 -O0 -g
+
+	CXXPPFLAGS = -std=c++17 -Wall -Wextra -Wpedantic -I inc/ -O0 -g
+	CXXFLAGS = -std=c++17 -O0 -g
+else
+	CPPFLAGS += -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O3
+	CFLAGS += -std=c99 -O3 -s
+
+	CXXPPFLAGS += -std=c++17 -Wall -Wextra -Wpedantic -I inc/ -O3
+	CXXFLAGS += -std=c++17 -O3
+endif
+
 LD_LIBS ?= -L. -lClame
 
-$(objs) : %.o : %.c $(headers)
+$(cobjs) $(cdemo_objs) : %.o : %.c $(headers)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
-libClame.a : $(objs)
-	$(AR) -r libClame.a $(objs)
+$(ccobjs) $(ccdemo_objs) : %.o : %.cc $(headers)
+	$(CXX) $(CXXPPFLAGS) -c $< -o $@
 
-$(demo_objs) : %.o : %.c $(headers)
-	$(CC) $(CPPFLAGS) -c $< -o $@
+libClame.a : $(cobjs) $(ccobjs)
+	$(AR) -r libClame.a $(cobjs) $(ccobjs)
 
-$(demos) : % : demo/%.o libClame.a
+$(cdemos) : % : demo/%.o libClame.a
 	$(CC) $(CFLAGS) $< -o $@ $(LD_LIBS)
 
-.DEFAULT_GOAL = all
-.PHONY : all clean
+$(ccdemos) : % : demo/%.o libClame.a
+	$(CXX) $(CXXFLAGS) $< -o $@ $(LD_LIBS)
 
-all : libClame.a $(demos)
+.DEFAULT_GOAL = all
+.PHONY : all clean debug
+
+all : libClame.a $(cdemos) $(ccdemos)
 
 clean :
 	$(CLEAN)
+
+debug :
+	+DEBUG="true" make all

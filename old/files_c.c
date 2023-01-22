@@ -1,5 +1,5 @@
 /* libClame: Command-line Arguments Made Easy
- * Copyright (C) 2021-2022 Jyothiraditya Nellakra
+ * Copyright (C) 2021-2023 Jyothiraditya Nellakra
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -14,14 +14,11 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <LC_files.h>
-#include <LC_vars.h>
 
 char *LCf_program_name = "";
 uint8_t LCf_program_ver = 1;
