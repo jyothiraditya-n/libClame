@@ -23,8 +23,8 @@
 #include <stdint.h>
 
 /* Version Information */
-#define LCA_VERSION 1 /* Incremented when backwards compatibility broken. */
-#define LCA_SUBVERSION 0 /* Incremented when new features added. */
+#define LCF_VERSION 1 /* Incremented when backwards compatibility broken. */
+#define LCF_SUBVERSION 0 /* Incremented when new features added. */
 
 typedef struct {
 	/* Basic data about the variable. */
@@ -38,14 +38,14 @@ typedef struct {
 
 	/* We need a pointer to the size_t variable which stores the length of
 	 * the array, which we'll set once we've read in our data. */
-	size_t *arr_len; // Set to NULL if not an array.
+	size_t *arr_length; // Set to NULL if not an array.
 
 	/* Minimum and maximum lengths, to help verify data. */
-	size_t min_arr_len; // Set to 0 if not an array.
-	size_t max_arr_len; // Set to 0 if not an array.
+	size_t min_arr_length; // Set to 0 if not an array.
+	size_t max_arr_length; // Set to 0 if not an array.
 
 	/* The length of the array. */
-	size_t var_len; // Set to the length of the variable data type.
+	size_t var_length; // Set to the length of the variable data type.
 
 } LCf_var_t;
 
@@ -56,8 +56,8 @@ extern char *LCf_program_name;
 extern uint8_t LCf_program_ver;
 extern uint8_t LCf_program_subver;
 
-extern int LCf_read(const char *filename, LCf_var_t *vars, size_t var_length);
-extern int LCf_save(const char *filename, LCf_var_t *vars, size_t var_length);
+extern int LCf_read(const char *filename, LCf_var_t *vars, size_t vars_length);
+extern int LCf_save(const char *filename, LCf_var_t *vars, size_t vars_length);
 
 #define LCF_OK 0
 #define LCF_FILEIO_ERR 1
