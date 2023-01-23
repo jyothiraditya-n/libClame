@@ -96,7 +96,7 @@ typedef struct {
 
 	/* If you want minimum or maximum length constraints specified, you can
 	 * do so with these two. There is however some nuance with the way they
-	 * work that you would want to read about in <docs/LC_args.md>. */
+	 * work that you would want to read about in <docs/LC_flags.md>. */
 
 	size_t min_arr_length; // Set to 0 to disable checking.
 	size_t max_arr_length; // Set to SIZE_MAX to disable checking.
@@ -112,8 +112,8 @@ typedef struct {
  * the parameters for your programs command-line arguments. Then, set the size
  * variable to make sure we don't run off the end of the array's data range. */
 
-extern LCa_flag_t *LC_args;
-extern size_t LC_args_length;
+extern LCa_flag_t *LC_flags;
+extern size_t LC_flags_length;
 
 /* Once you have set up the variables above, you can call the LCa_read function
  * to process your command line arguments. */
@@ -123,7 +123,7 @@ extern int LCa_read(int argc, char **argv);
 /* The following are the menaings of the returned values from LCa_read(). */
 
 #define LCA_OK 0 // No errors occurred.
-#define LCA_NO_ARGS 1 // LC_args is a NULL pointer.
+#define LCA_NO_ARGS 1 // LC_flags is a NULL pointer.
 #define LCA_MALLOC_ERR 2 // malloc() returned a NULL pointer.
 
 #define LCA_BAD_FLAG 3 // A malformed flag was supplied to the program.

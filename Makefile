@@ -14,60 +14,41 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
-cheaders = $(wildcard inc/*.h)
-cobjs = $(patsubst %.c,%.o,$(wildcard src/*.c))
-ccobjs = $(patsubst %.cc,%.o,$(wildcard src/*.cc))
+headers = $(wildcard inc/*.h)
+objs = $(patsubst %.c,%.o,$(wildcard src/*.c))
 
-ccheaders = $(wildcard inc/libClame/*.h)
-cdemos = $(patsubst demo/%.c,%,$(wildcard demo/*.c))
-cdemo_objs = $(patsubst %.c,%.o,$(wildcard demo/*.c))
+demos = $(patsubst demo/%.c,%,$(wildcard demo/*.c))
+demo_objs = $(patsubst %.c,%.o,$(wildcard demo/*.c))
 
-ccdemos = $(patsubst demo/%.cc,%,$(wildcard demo/*.cc))
-ccdemo_objs = $(patsubst %.cc,%.o,$(wildcard demo/*.cc))
-
-files = $(foreach file,$(cobjs) $(cdemo_objs),$(wildcard $(file)))
-files += $(foreach file,$(ccobjs) $(ccdemo_objs),$(wildcard $(file)))
-files += $(foreach file,$(cdemos),$(wildcard $(file)))
-files += $(foreach file,$(ccdemos),$(wildcard $(file)))
+files = $(foreach file,$(objs) $(demo_objs),$(wildcard $(file)))
+files += $(foreach file,$(demos),$(wildcard $(file)))
 files += $(wildcard *.a)
 
 CLEAN = $(foreach file,$(files),rm $(file);)
 
 ifneq ($(DEBUG),)
-	CPPFLAGS = -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O0 -g
-	CFLAGS = -std=c99 -O0 -g
-
-	CXXPPFLAGS = -std=c++17 -Wall -Wextra -Wpedantic -I inc/ -O0 -g
-	CXXFLAGS = -std=c++17 -O0 -g
+	CPPFLAGS += -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O0 -g
+	CFLAGS += -std=c99 -O0 -g
 else
 	CPPFLAGS += -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O3
 	CFLAGS += -std=c99 -O3 -s
-
-	CXXPPFLAGS += -std=c++17 -Wall -Wextra -Wpedantic -I inc/ -O3
-	CXXFLAGS += -std=c++17 -O3
 endif
 
 LD_LIBS ?= -L. -lClame
 
-$(cobjs) $(cdemo_objs) : %.o : %.c $(headers)
+$(objs) $(demo_objs) : %.o : %.c $(headers)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
-$(ccobjs) $(ccdemo_objs) : %.o : %.cc $(headers)
-	$(CXX) $(CXXPPFLAGS) -c $< -o $@
+libClame.a : $(objs) $(cobjs)
+	$(AR) -r libClame.a $(objs) $(cobjs)
 
-libClame.a : $(cobjs) $(ccobjs)
-	$(AR) -r libClame.a $(cobjs) $(ccobjs)
-
-$(cdemos) : % : demo/%.o libClame.a
+$(demos) : % : demo/%.o libClame.a
 	$(CC) $(CFLAGS) $< -o $@ $(LD_LIBS)
-
-$(ccdemos) : % : demo/%.o libClame.a
-	$(CXX) $(CXXFLAGS) $< -o $@ $(LD_LIBS)
 
 .DEFAULT_GOAL = all
 .PHONY : all clean debug
 
-all : libClame.a $(cdemos) $(ccdemos)
+all : libClame.a $(demos) $(cdemos)
 
 clean :
 	$(CLEAN)

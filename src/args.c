@@ -23,8 +23,8 @@
 /* Create the symbols for the variables that are externed in the header; set
  * counts to zero and pointers to NULL. */
 
-LCa_flag_t *LC_args = NULL;
-size_t LC_args_length = 0;
+LCa_flag_t *LC_flags = NULL;
+size_t LC_flags_length = 0;
 
 char **LCa_flagless_args = NULL;
 size_t LCa_flagless_args_length = 0;
@@ -51,7 +51,7 @@ typedef struct node_s {
  * node we are currently processing, as that'll need to be referenced and
  * modified across multiple subroutines. */
 
-static node_t root = {&root, NULL, NULL};
+static node_t root = {NULL, NULL, NULL};
 static node_t *current = &root;
 
 /* There is only one function of ours that's visible to things outside of this
@@ -90,8 +90,8 @@ int LCa_read(int argc, char **argv) {
 		LCa_flagless_args = NULL; // Prevent a double-free.
 	}
 
-	/* Bail if the LC_args array is not properly set up. */
-	if(!LC_args) return LCA_NO_ARGS;
+	/* Bail if the LC_flags array is not properly set up. */
+	if(!LC_flags) return LCA_NO_ARGS;
 
 	/* Push the arguments onto the root node in from first to last. */
 	LCa_flagless_args_length = 0;
@@ -396,13 +396,13 @@ static LCa_flag_t *find_flag(const char *lflag, char sflag) {
 	 * see if the short flags match. Else, spend the time it'll take to
 	 * check if the long flag strings match. */
 
-	for(size_t i = 0; i < LC_args_length; i++) {
-		if(sflag == LC_args[i].short_flag) return &LC_args[i];
+	for(size_t i = 0; i < LC_flags_length; i++) {
+		if(sflag == LC_flags[i].short_flag) return &LC_flags[i];
 
 		if(!lflag) continue; // Don't pass any null pointer to strcmp.
-		if(!LC_args[i].long_flag) continue;
+		if(!LC_flags[i].long_flag) continue;
 
-		if(!strcmp(lflag, LC_args[i].long_flag)) return &LC_args[i];
+		if(!strcmp(lflag, LC_flags[i].long_flag)) return &LC_flags[i];
 	}
 
 	/* Return NULL if no argument with either the specified short or long

@@ -85,10 +85,10 @@ LCa_flag_t args[] = {
 };
 
 int main(int argc, char **argv) {
-	/* Set the LC_args array to the one that we have, and get the number of
+	/* Set the LC_flags array to the one that we have, and get the number of
 	 * entries automatically using sizeof. */
-	LC_args_length = sizeof(args) / sizeof(LCa_flag_t);
-	LC_args = args;
+	LC_flags_length = sizeof(args) / sizeof(LCa_flag_t);
+	LC_flags = args;
 	
 	/* Get the library to process our args and print out the help dialogue
 	 * on a non-system (usage) error. If there is a memory error, then go
@@ -152,7 +152,7 @@ int about_flag() {
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
 	puts("  Copyright (C) 2021-2023 Jyothiraditya Nellakra");
-	puts("  Demonstration Program for <LC_args.h>\n");
+	puts("  Demonstration Program for <LC_flags.h>\n");
 
 	puts("  This program is free software: you can redistribute it and/or modify");
 	puts("  it under the terms of the GNU General Public License as published by");
