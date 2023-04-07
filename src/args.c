@@ -7,13 +7,14 @@
  * any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * ANY WARRANTY; without even- the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,6 +82,11 @@ static int get_others(LCa_flag_t *flag, node_t *node, char *value);
 /* This function deletes the next node from the list and return the string
  * stored in it. */
 static char *pop_node(node_t *node);
+
+/* This function prints the flag for which an error has occurred, as this
+ * unfortunately needs some validness checking that would be too annoying to do
+ * in the other functions that are already too deeply nested. */
+static void print_flag(LCa_flag_t *flag);
 
 int LCa_read(int argc, char **argv) {
 	/* If there's any previously allocated array of flagless arguments,
@@ -259,8 +265,8 @@ static int evaluate_lflag(node_t *node) {
 	/* Make sure that the flag isn't being set for the second time or has
 	 * been marked as readonly. */
 	if(flag -> readonly) {
-		fprintf(stderr, "%s: error: the flag '%s' has been set "
-			"multiple times .\n", LCa_prog_name, lflag
+		fprintf(stderr, "%s: error: the flag '--%s' has been set "
+			"multiple times.\n", LCa_prog_name, lflag
 		);
 
 		return LCA_VAR_RESET;
@@ -340,7 +346,7 @@ static int evaluate_sflag(node_t *node, char sflag, char *value) {
 	 * been marked as readonly. */
 	if(flag -> readonly) {
 		fprintf(stderr, "%s: error: the flag '-%c' has been set "
-			"multiple times .\n", LCa_prog_name, sflag
+			"multiple times.\n", LCa_prog_name, sflag
 		);
 
 		return LCA_VAR_RESET;
@@ -424,11 +430,9 @@ static int get_strings(LCa_flag_t *flag, node_t *node, char *value) {
 		/* Make sure the node exists or else we'll need to issue an
 		 * error message. */
 		if(!node -> next) {
-			fprintf(stderr, "%s: error: the flag '--%s' / '-%c' "
-				"needs an additional argument.\n",
-				LCa_prog_name, flag -> long_flag,
-				flag -> short_flag
-			);
+			fprintf(stderr, "%s: error: the flag ", LCa_prog_name);
+			print_flag(flag);
+			fprintf(stderr, " needs an additional argument.\n");
 
 			return LCA_NO_VAL;
 		}
@@ -479,19 +483,17 @@ static int get_strings(LCa_flag_t *flag, node_t *node, char *value) {
 
 	/* Let's go ahead and verify that the array length is correct. */
 	if(*(flag -> arr_length) < flag -> min_arr_length) {
-		fprintf(stderr, "%s: error: the flag '--%s' / '-%c' has too "
-			"few arguments provided.\n", LCa_prog_name,
-			flag -> long_flag, flag -> short_flag
-		);
+		fprintf(stderr, "%s: error: the flag ", LCa_prog_name);
+		print_flag(flag);
+		fprintf(stderr, " has too few arguments provided.\n");
 
 		return LCA_LESS_VALS;
 	}
 
 	if(*(flag -> arr_length) > flag -> max_arr_length) {
-		fprintf(stderr, "%s: error: the flag '--%s' / '-%c' has too "
-			"many arguments provided.\n", LCa_prog_name,
-			flag -> long_flag, flag -> short_flag
-		);
+		fprintf(stderr, "%s: error: the flag ", LCa_prog_name);
+		print_flag(flag);
+		fprintf(stderr, " has too many arguments provided.\n");
 
 		return LCA_MORE_VALS;
 	}
@@ -505,14 +507,16 @@ static int get_others(LCa_flag_t *flag, node_t *node, char *value) {
 		/* Since we are no longer dealing with just a simple string, we
 		 * need to verify that they are the correct format and that
 		 * sscanf() didn't choke on the input. */
+
+		if(!flag -> fmt_string) return LCA_NULL_FORMAT_STR;
 		int ret = sscanf(value, flag -> fmt_string, flag -> var_ptr);
 		
 		if(ret != 1) {
-			fprintf(stderr, "%s: error: the argument `%s' is "
-				"invalid for the flag '--%s' / '-%c'.\n",
-				LCa_prog_name, value, flag -> long_flag,
-				flag -> short_flag
+			fprintf(stderr, "%s: error: the string `%s' is "
+				"invalid for the flag", LCa_prog_name, value
 			);
+			print_flag(flag);
+			fprintf(stderr, ".\n");
 
 			return LCA_BAD_VAL;
 		}
@@ -526,27 +530,28 @@ static int get_others(LCa_flag_t *flag, node_t *node, char *value) {
 		/* Make sure the node exists or else we'll need to issue an
 		 * error message. */
 		if(!node -> next) {
-			fprintf(stderr, "%s: error: the flag '--%s' / '-%c' "
-				"needs an additional argument.\n",
-				LCa_prog_name, flag -> long_flag,
-				flag -> short_flag
-			);
+			fprintf(stderr, "%s: error: the flag ", LCa_prog_name);
+			print_flag(flag);
+			fprintf(stderr, " needs an additional argument.\n");
 
 			return LCA_NO_VAL;
 		}
 
 		/* Get the value and remove the node so that we don't process
 		 * it again in the future.*/
-		int ret = sscanf(pop_node(node), flag -> fmt_string,
+		value = pop_node(node);
+
+		if(!flag -> fmt_string) return LCA_NULL_FORMAT_STR;
+		int ret = sscanf(value, flag -> fmt_string,
 			flag -> var_ptr
 		);
 		
 		if(ret != 1) {
 			fprintf(stderr, "%s: error: the string `%s' is "
-				"invalid for the flag '--%s' / '-%c'.\n",
-				LCa_prog_name, value, flag -> long_flag,
-				flag -> short_flag
+				"invalid for the flag", LCa_prog_name, value
 			);
+			print_flag(flag);
+			fprintf(stderr, ".\n");
 
 			return LCA_BAD_VAL;
 		}
@@ -564,13 +569,16 @@ static int get_others(LCa_flag_t *flag, node_t *node, char *value) {
 	/* We need a temporary variable to store the data as sscanf() tries to
 	 * read it. */
 	char testing_area[flag -> var_length];
+
+	if(!flag -> fmt_string) return LCA_NULL_FORMAT_STR;
 	int ret = value? sscanf(value, flag -> fmt_string, testing_area): 1;
 
 	if(ret != 1) {
 		fprintf(stderr, "%s: error: the string `%s' is invalid for "
-			"the flag '--%s' / '-%c'.\n", LCa_prog_name, value,
-			flag -> long_flag, flag -> short_flag
+			"the flag", LCa_prog_name, value
 		);
+		print_flag(flag);
+		fprintf(stderr, ".\n");
 
 		return LCA_BAD_VAL;
 	}
@@ -586,6 +594,7 @@ static int get_others(LCa_flag_t *flag, node_t *node, char *value) {
 			break;
 		}
 
+		if(!flag -> fmt_string) return LCA_NULL_FORMAT_STR;
 		ret = sscanf(i -> string, flag -> fmt_string, testing_area);
 		if(ret != 1) break;
 
@@ -605,15 +614,17 @@ static int get_others(LCa_flag_t *flag, node_t *node, char *value) {
 
 	/* If we were passed a value directly, then go ahead and scan that over
 	 * first. */
-	if(value) sscanf(value, flag -> fmt_string, 
-		*(void **) flag -> var_ptr
-	);
+	if(value) {
+		if(!flag -> fmt_string) return LCA_NULL_FORMAT_STR;
+		sscanf(value, flag -> fmt_string, *(void **) flag -> var_ptr);
+	}
 
 	/* Loop over and copy the other values. */
 	for(size_t i = value? 1: 0; i < *(flag -> arr_length); i++) {
 		/* We need to use char ** here to make sure the compiler
 		 * doesn't keep complaining forever about us doing pointer
 		 * arithmetic with void *. */
+		if(!flag -> fmt_string) return LCA_NULL_FORMAT_STR;
 		sscanf(pop_node(node), flag -> fmt_string, 
 			*(char **) flag -> var_ptr + i * flag -> var_length
 		);
@@ -621,19 +632,17 @@ static int get_others(LCa_flag_t *flag, node_t *node, char *value) {
 
 	/* Let's go ahead and verify that the array length is correct. */
 	if(*(flag -> arr_length) < flag -> min_arr_length) {
-		fprintf(stderr, "%s: error: the flag '--%s' / '-%c' has too "
-			"few arguments provided.\n", LCa_prog_name,
-			flag -> long_flag, flag -> short_flag
-		);
+		fprintf(stderr, "%s: error: the flag ", LCa_prog_name);
+		print_flag(flag);
+		fprintf(stderr, " has too few arguments provided.\n");
 
 		return LCA_LESS_VALS;
 	}
 
 	if(*(flag -> arr_length) > flag -> max_arr_length) {
-		fprintf(stderr, "%s: error: the flag '--%s' / '-%c' has too "
-			"many arguments provided.\n", LCa_prog_name,
-			flag -> long_flag, flag -> short_flag
-		);
+		fprintf(stderr, "%s: error: the flag ", LCa_prog_name);
+		print_flag(flag);
+		fprintf(stderr, " has too many arguments provided.\n");
 
 		return LCA_MORE_VALS;
 	}
@@ -656,4 +665,26 @@ static char *pop_node(node_t *node) {
 
 	LCa_flagless_args_length--;
 	return string;
+}
+
+static void print_flag(LCa_flag_t *flag) {
+	/* If both the long and short flags are set, then print them both. */
+	if(flag -> long_flag && isprint(flag -> short_flag)) {
+		fprintf(stderr, "'--%s' / '-%c'",
+			flag -> long_flag, flag -> short_flag
+		);
+	}
+
+	/* If only one or the other is set, then print the appropriate one. */
+	else if(flag -> long_flag) {
+		fprintf(stderr, "'--%s'", flag -> long_flag);
+	}
+
+	else {
+		fprintf(stderr, "'-%c'", flag -> short_flag);
+	}
+
+	/* Notably, we are assuming by this point that either one of them is
+	 * set because this function isn't called from a place where that
+	 * wouldn't be the case. */
 }

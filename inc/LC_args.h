@@ -35,8 +35,8 @@ typedef struct {
 	 * while `-<something> specifies a series of short flags`, each of
 	 * which is one character long. */
 
-	const char *long_flag;
-	char short_flag;
+	const char *long_flag; // Set to NULL to not use this.
+	char short_flag; // Set to 0 to not use this.
 
 	/* If you have a function that takes no parameters and returns an
 	 * integer, you can point to it here to be run when the flag is found.
@@ -44,6 +44,12 @@ typedef struct {
 	 * so that we can detect that and avoid causing a segfault. */
 
 	int (*function)();
+
+	/* Note about pointers: While we do check that you're not giving us
+	 * NULL pointers in places that it doesn't make sense, we can't check
+	 * that the memory it points to is either the correct variable or a
+	 * place in memory that can actually be written to. So, make sure to
+	 * check that as you're writing your code. */
 
 	/* If the function executed correctly, go ahead and return 0. Any other
 	 * value will be treated as an error. When that occurs, we will save
@@ -57,9 +63,8 @@ typedef struct {
 	 * specify the variable's name as well as its type and location with
 	 * these parameters. */
 
-	const char *var_name; // Set this to NULL if you don't have a variable.
 	void *var_ptr; // Set this to NULL if you don't have a variable.
-	int var_type; // Set this to 0 if you don't have a variable.
+	int var_type; // This value is not used if you don't have a variable.
 
 	/* If the variable you want to get is a string constant (i.e. a
 	 * pointer to the start of a null-terminated set of characters in
@@ -69,11 +74,11 @@ typedef struct {
 	 * boolean value directly to the value in bool_value, wherein var_ptr
 	 * is of type (bool *). */
 
-	#define LCA_STRING_VAR 0
-	#define LCA_BOOL_VAR 1
-	#define LCA_OTHER_VAR 2
+	#define LCA_STRING_VAR 1
+	#define LCA_BOOL_VAR 2
+	#define LCA_OTHER_VAR 3
 
-	bool value; // Set this to false if you aren't going to use it.
+	bool value; // This isn't used if the variable's type isn't a bool.
 
 	/* For all other types of variables, we'll need a format string that'll
 	 * get passed as the second argument to sscanf where the first argument
@@ -84,12 +89,22 @@ typedef struct {
 
 	const char *fmt_string; // Set this to NULL if you don't have anything.
 
+	/* Note: Because C doesn't give us many powers when it comes to
+	 * runtime debugging, it's up to you to make sure that your format
+	 * string is correct. The best we can do is error out if you give us a
+	 * pointer to null, but otherwise you're on your own. */
+
 	/* If you want to get a set of values as a dynamically allocated array
 	 * then you'll just need to give us the length of each array member as
 	 * well as a size variable to store the final array size in. Then, if
 	 * you want an array of typename T values, you'll want to set var_ptr
 	 * to be a pointer to a variable of type T*, i.e. var_ptr will
 	 * transparently be of type T**. */
+
+	/* Note that if you have dynamically-sized arrays, we will free the
+	 * current allocations if (*(char ***) flag -> var_ptr) isn't NULL so
+	 * bewarned that this may cause a segfault if you statically allocate
+	 * an array. (Alternatively, if (*(void **)) isn't NULL.) */
 
 	size_t *arr_length; // Set to NULL if it isn't an array.
 	size_t var_length; // Set to 0 if it isn't an array.
@@ -135,6 +150,7 @@ extern int LCa_read(int argc, char **argv);
 #define LCA_FUNC_ERR 9 // A user-defined function returned an error.
 
 #define LCA_BAD_VAR_TYPE 10 // The specified flag var_type is invalid.
+#define LCA_NULL_FORMAT_STR 11 // A NULL pointer was was given for sscanf.
 
 /* These variables are set by the LCa_read() function when it encounters
  * arguments supplied to the program that were not preceded by a flag. */

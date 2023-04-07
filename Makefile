@@ -27,11 +27,11 @@ files += $(wildcard *.a)
 CLEAN = $(foreach file,$(files),rm $(file);)
 
 ifneq ($(DEBUG),)
-	CPPFLAGS += -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O0 -g
-	CFLAGS += -std=c99 -O0 -g
+	CPPFLAGS += -std=gnu99 -Wall -Wextra -Wpedantic -I inc/ -O0 -g
+	CFLAGS += -std=gnu99 -O0 -g
 else
-	CPPFLAGS += -std=c99 -Wall -Wextra -Wpedantic -I inc/ -O3
-	CFLAGS += -std=c99 -O3 -s
+	CPPFLAGS += -std=gnu99 -Wall -Wextra -Wpedantic -I inc/ -O3
+	CFLAGS += -std=gnu99 -O3 -s
 endif
 
 LD_LIBS ?= -L. -lClame
