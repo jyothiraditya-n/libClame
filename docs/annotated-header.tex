@@ -1,0 +1,216 @@
+\section{Annotated Version of the \mintinline{bash}{libClame.h} Headerfile.}
+
+You can use this libarry in your program by including the \mintinline{bash}{libClame.h} header file. As such, this reference document provides an annotated version of this header file as a guide to how you should set up your C code.
+
+\subsection{Version Information}
+
+\begin{minted}{c}
+#define LC_VERSION 1 /* Incremented when backwards compatibility is broken. */
+#define LC_SUBVERSION 0 /* Incremented when new features are added. */
+\end{minted}
+
+\subsection{Useful Macros}
+
+\begin{minted}{c}
+/* Get the length of a statically-defined array: */
+#define LC_ARRAY_LENGTH(array) (sizeof(array) / sizeof(*array))
+\end{minted}
+
+\subsection{The \monoc{LC_flag_t} Structure}
+
+Each flag that we process has properties specified by an \monoc{LC_flag_t} struct. A run down of what all of the properties do and mean is written in the comments within the structure definition itself.
+
+\begin{minted}{c}
+typedef struct LC_flag_s {
+\end{minted}
+
+\subsubsection{Flags}
+
+The long flag is what you specify when you type \mintinline{bash}{--<something>} while \mintinline{bash}{-<something>} specifies a series of short flags, each of which is one character long.
+
+\begin{minted}{c}
+	const char *long_flag; // Set to NULL to not use this.
+	char short_flag; // Set to 0 to not use this.
+\end{minted}
+
+\subsubsection{Callback Function}
+
+If you have a function that takes a flag pointer and returns an integer, you can point to it here to be run when the flag is found. If you don't have anything you want to run, set the pointer to \monoc{NULL} so that we can detect that and avoid causing a segfault.\footnotemark
+
+\footnotetext{
+	Note about pointers: While we do check that you're not giving us \monoc{NULL} pointers in places where it wouldn't make sense, we can't check that the memory it points to is either what it should be, or that it is even a place in memory that can be written to. Such is the nature of the C programming language, so make sure you're double-checking your code.
+}
+
+\begin{minted}{c}
+	int (*function)(struct LC_flag_s *flag);
+\end{minted}
+
+If the function executed correctly, go ahead and return 0. Any other value will be treated as an error. When that occurs, we will save the returned value as well as the function pointer as specified later on in the header, for you to process through later.
+
+\begin{minted}{c}
+	#define LC_FUNCTION_OK 0
+	#define LC_FUNCTION_ERR (!LC_FUNCTION_OK)
+\end{minted}
+
+\subsubsection{Variables}
+\label{sec:var-discussion}
+
+If the flag is used to set a variable in the code, then you can specify the variable's name as well as its type and location with these parameters.
+
+\begin{minted}{c}
+	void *var_ptr; // Set this to NULL if you don't have a variable.
+	int var_type; // This value is not used if you don't have a variable.
+\end{minted}
+
+If the variable you want to get is a string constant (i.e. a pointer to the start of a null-terminated set of characters in memory) we can set the pointer for you directly without needing a format string to pass to \monoc{sscanf}. In this case, \monoc{var_ptr} is transparently treated as a \monoc{(char *)*} type. We can also set a boolean value directly to the value in \monoc{bool_value} and consider \monoc{var_ptr} to be of type \monoc{(bool *)}.
+
+\begin{minted}{c}
+	#define LC_STRING_VAR 1
+	#define LC_BOOL_VAR 2
+	#define LC_OTHER_VAR 3
+
+	bool value; // This isn't used if the variable's type isn't a bool.
+\end{minted}
+
+For anything else, the poniter is treated like it's of type \monoc{(T *)} to your variable of type \monoc{T}, in C++ pseudo-parlance. For example, if you want to get an integer value, you would set \monoc{var_ptr} to \monoc{&your_integer} and \monoc{var_ptr} would thus transparently be an \monoc{int*} type.
+
+\subsubsection{Format Strings}
+
+When it comes to variables of the \monoc{LC_OTHER_VAR} type, we'll need a format string. This will get passed as the second argument to \monoc{sscanf}, where the first argument is the string that we've gotten corresponding to the specified data, and the third argument is \monoc{var_ptr}. 
+
+\begin{minted}{c}
+	const char *fmt_string; // Set this to NULL if you don't have anything.
+\end{minted}
+
+(Again, as C doesn't give us many powers when it comes to runtime debugging, it's up to you to make sure that your format string is correct. The best we can do is error out if you give us a pointer to \monoc{NULL}, but otherwise you're on your own.)
+
+\subsubsection{Array Lengths}
+\label{sec:arr-discussion}
+
+If you want to get a set of values as a dynamically allocated array then you'll just need to give us the length of each array member as well as a size variable to store the final array size in. Then, if you want an array of type \monoc{T} values, you'll want to set \monoc{var_ptr} to be a pointer to a variable of type \monoc{T*}, i.e. \monoc{var_ptr} will transparently be of type \monoc{T**}.
+
+Note that if you have dynamically-sized arrays, we will free the current allocations if \monoc{(*(char ***) flag -> var_ptr)} or \monoc{(*(void **)) flag -> var_ptr} isn't \monoc{NULL}. So, be warned that you could potentially lose your data, and that this will cause a segfault if you statically allocate the array instead of dynamically allocating it.
+
+\begin{minted}{c}
+	size_t *arr_length; // Set to NULL if it isn't an array.
+	size_t var_length; // Set to 0 if it isn't an array.
+\end{minted}
+
+If you want minimum or maximum length constraints specified, you can do so with the following two:
+
+\begin{minted}{c}
+	size_t min_arr_length; // Set to 0 to disable checking.
+	size_t max_arr_length; // Set to SIZE_MAX to disable checking.
+\end{minted}
+
+\subsubsection{Read-Only Variables}
+
+We need a boolean to keep track of whether a variable has already been written to, so that we don't allow conflicting flags. Of course, there's nothing stopping you from also using this variable to write-protect your data for something like debugging.
+
+\begin{minted}{c}
+	bool readonly; // Set this to false by default.
+} LC_flag_t;
+\end{minted}
+
+\subsubsection{In Summary}
+
+Table \ref{tbl:LC-flag-t-vars} has a brief list of the variables in the \monoc{LC_flag_t} structure, along with their usages and preferred values for default initialisation.
+
+\begin{table}[htbp]
+\centering
+\begin{tabulary}{\linewidth}{J J J J}
+	\toprule
+	\textbf{Variable} & \textbf{Type} & \textbf{Usage} & \textbf{Value if Feature Unused} \\
+	\midrule
+	\monoc{long_flag} & \monoc{const char *} & Long Flag & \monoc{NULL} \\
+	\monoc{short_flag} & \monoc{char} & Short Flag & \monoc{'\0'} \\
+	\midrule
+	\monoc{function} & \monoc{int (*)(LC_flag_t *)} & Callback Function & \monoc{NULL} \\
+	\midrule
+	\monoc{var_ptr} & \monoc{void *}\footnotemark  & Pointer to Variable or Array & \monoc{NULL} \\
+	\monoc{var_type} & \monoc{int} & Variable Type & - \\
+	\monoc{value} & \monoc{bool} & Value to set Boolean & - \\
+	\midrule
+	\monoc{fmt_string} & \monoc{const char*} & Format String & \monoc{NULL} \\
+	\midrule
+	\monoc{arr_length} & \monoc{size_t*} & Array Size & \monoc{NULL} \\
+	\monoc{var_length} & \monoc{size_t} & Variable Size & - \\
+	\midrule
+	\monoc{min_arr_length} & \monoc{size_t} & Minimum Array Size & \monoc{0} \\
+	\monoc{max_arr_length} & \monoc{size_t} & Maximum Array Size & \monoc{SIZE_MAX} \\
+	\midrule
+	\monoc{readonly} & \monoc{bool} & Variable Write Protection & \monoc{false} \\
+	\bottomrule
+\end{tabulary}
+\caption{\label{tbl:LC-flag-t-vars} An overview of the variables in an \monoc{LC_flag_t} structure. Empty values means that it doesn't matter.}
+\end{table}
+
+\footnotetext{Variables are \monoc{char **}, \monoc{bool *}, or \monoc{T*}; and arrays are \monoc{char ***}, \monoc{bool **}, or \monoc{T**}. See Sections \ref{sec:var-discussion} and \ref{sec:var-discussion} for more information.}
+
+\subsection{Passing the Flags Along}
+
+You'll want to set the pointer to point to the start of an array containing the parameters for your programs command-line arguments. Then, set the size variable to make sure we don't run off the end of the array's data range. (You can use the \monoc{LC_ARRAY_LENGTH} macro to calculate that quickly for you.)
+
+\begin{minted}{c}
+extern LC_flag_t *LC_flags;
+extern size_t LC_flags_length;
+\end{minted}
+
+\subsection{Calling the Parsing Function}
+
+Once you have set up the variables above, you can call the \monoc{LC_read()} function to process your command line arguments.
+
+\begin{minted}{c}
+extern int LC_read(int argc, char **argv);
+\end{minted}
+
+\subsection{Returned Values}
+
+\subsubsection{Error Codes}
+
+The following are the meanings of the returned values from \monoc{LC_read()}.
+
+\begin{minted}{c}
+#define LC_OK              0  // No errors occurred.
+#define LC_NO_ARGS         1  // LC_flags is a NULL pointer.
+#define LC_MALLOC_ERR      2  // malloc() returned a NULL pointer.
+
+#define LC_BAD_FLAG        3  // A malformed flag was supplied to the program.
+#define LC_VAR_RESET       4  // A variable was set twice on the command line.
+#define LC_NO_VAL          5  // No value was supplied to a flag that sets a variable.
+#define LC_BAD_VAL         6  // A malformed value was supplied.
+#define LC_LESS_VALS       7  // Fewer values were supplied than the flag accepts.
+#define LC_MORE_VALS       8  // More values were supplied than the flag accepts.
+#define LC_FUNC_ERR        9  // A user-defined function returned an error.
+
+#define LC_BAD_VAR_TYPE    10 // The specified flag var_type is invalid.
+#define LC_NULL_FORMAT_STR 11 // A NULL pointer was was given for sscanf.
+\end{minted}
+
+\monoc{LC_NO_ARGS} and \monoc{LC_BAD_FLAG} mean that we caught non-fatal errors within the program using libClame, while \monoc{LC_MALLOC_ERR} will be passed on a failure to allocate memory. (This could be a result of memory scarcity, but is probably a result of something going very wrong in libc.) Every other return value is a type of user error at the command-prompt.
+
+\subsubsection{Flagless Arguments}
+
+These variables are set by the \monoc{LC_read()} function when it encounters arguments supplied to the program that were not preceded by a flag.
+
+\begin{minted}{c}
+extern char **LC_flagless_args;
+extern size_t LC_flagless_args_length;
+\end{minted}
+
+\subsubsection{Program Name}
+
+We also get the program name out of \monoc{argv[0]}.
+
+\begin{minted}{c}
+extern char *LC_prog_name;
+\end{minted}
+
+\subsubsection{User-Specified Function Error}
+
+And finally, the following variables are set by the \monoc{LC_read()} function if a user-defined function returned an error code of some sort.
+
+\begin{minted}{c}
+extern int (*LC_err_function)();
+extern int LC_function_errno;
+\end{minted}

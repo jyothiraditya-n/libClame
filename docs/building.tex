@@ -1,0 +1,53 @@
+\section{Compiling, Building \& Linking}
+
+This library is linked statically into your program binary, with the \monotext{.o} object files being held in the \monotext{libClame.a} archive file. This file can be passed to the linker \monotext{ld} (or your C compiler \monotext{cc}, which then sends it to \monotext{ld}) by use of the \monotext{-L<dir> -lClame} flags, where \monotext{dir} is the directory of the compiled binary. As for the header files, they are stored within the \monotext{inc/} folder.
+
+\subsection{Prerequisite Build Tools}
+
+In order to compile the library, you will need a working copy of a C compiler that supports the C99 standard and GNU Make. This will probably get you both a linker and an archiver on most any version of Unix. Thereafter, to compile the latex documentation, you will need \LaTeX{}, a working copy of the \monotext{minted} \LaTeX{} package and its requisite copy of Python \monotext{pygments}, as well as the following \LaTeX{} libraries:
+
+\begin{itemize}
+	\item \monotext{geometry}, used for setting the page layout.
+	\item \monotext{hyperref}, used for URLs.
+	\item \monotext{tabulary} and \monotext{booktabs}, used for dynamic tables.
+\end{itemize}
+
+\subsection{Automatic Configuration \& Compilation With Make}
+
+The compilation of this library and its associated documentation and example programs is handled through GNU Make. After downloading the library, running \monotext{make config} will allow you to configure the build options. The prompts will be auto-populated with what should hopefully be sane defaults, so you can continue through just by pressing enter if you don't wish to change anything.
+
+Once configured, you can create a release binary for the archive by running \monotext{make} or \monotext{make release}. A development binary with debugging symbols can be made with \monotext{make debug}. In either case, the output file is located in the \monotext{build/} folder.
+
+Similarly, you can compile the documentation for the project with \monotext{make release docs}, which will produce a PDF file at \monotext{build/libClame.pdf}. Running \monotext{make demos} will also produce the demo program binaries in the \monotext{build/} folder.
+
+Testing is done by running \monotext{make test}. And you can clean up all the build and configuration files by running \monotext{make clean} and \monotext{make deep-clean}, respectively.
+
+\subsection{Manual Configuration by Editing Files}
+
+It is possible to bypass the automatic build configuration script and manually set up a build configuration by writing strings to the following files stored within the \monotext{config/} folder. A list of these variables is found in Table \ref{tbl:config-vars}.
+
+\begin{table}[htbp]
+\centering
+\begin{tabulary}{\linewidth}{J J J J}
+	\toprule
+	\textbf{Make Variable} & \textbf{Configuration File} & \textbf{Description} & \textbf{Default Value From Configuration Script} \\
+	\midrule
+	\monotext{CC} & \monotext{cc.conf} & C Compiler Command Name & \monotext{cc} \\
+	\midrule
+	\monotext{CFLAGS} & \monotext{cflags _release .conf} & C Build Flags for Release Mode & \mintinline[breaklines,breakanywhere]{text}{-std=c99 -Wall -Wextra -Wpedantic -s -O3 -Iinc/} \\
+	\midrule
+	\monotext{CFLAGS} & \monotext{cflags _debug .conf} & C Build Flags for Debug Mode & \mintinline[breaklines,breakanywhere]{text}{-std=c99 -Wall -Wextra -Werror -Wpedantic -g -Og -Iinc/} \\
+	\midrule
+	\monotext{LD} & \monotext{ld.conf} & Linker Command Name & \monotext{ld} \\
+	\midrule
+	\monotext{AR} & \monotext{ar.conf} & Archiver Command Name & \monotext{ar} \\
+	\midrule
+	\monotext{LD_LIBS} & \monotext{ld_libs.conf} & Linker Flags & \monotext{-Lbuild/ -lClame} \\
+	\midrule
+	\monotext{LATEX} & \monotext{latex _release .conf} & Latex Compilation Command for Release Mode & \mintinline[breaklines,breakanywhere]{text}{for i in 1, 2; do pdflatex -shell-escape -interaction=batchmode main.tex; done} \\
+	\midrule
+	\monotext{LATEX} & \monotext{latex _debug .conf} & Latex Compilation Command for Debug Mode & \mintinline[breaklines,breakanywhere]{text}{pdflatex -shell-escape -interaction=nonstopmode main.tex} \\
+	\bottomrule
+\end{tabulary}
+\caption{\label{tbl:config-vars}A list of the configuration files used by the build system.}
+\end{table}

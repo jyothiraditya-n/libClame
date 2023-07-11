@@ -1,0 +1,53 @@
+\section{The Command-Line Calling Syntax}
+
+Calling programs on the command line is done through as series of alternating flags and arguments when running the executable in the shell. Within the program, the ones that are specified must be parsed to run callback functions for specialised behaviours and set variables with the correct values.
+
+\subsection{Short \& Long Flags}
+
+Flags can be either long or short. A long flag is identifiable on the command-line as a double hyphen followed by a series of printable, non-space ASCII characters\footnotemark excluding the equals-to sign. Conversely, a short flag is identifiable as a single hyphen followed by a single ASCII character, which may not be a hyphen.
+\footnotetext{Henceforth simply referred to as an ASCII character to avoid tedium, unless otherwise specified. It should also be noted that lowercase and uppercase characters are considered distinct characters that cannot be conflated with one another, unlike in Windows or DOS.}
+
+The following are some examples of this:
+\begin{itemize}
+	\item \monotext{--help} This is a long flag for calling the help dialogue.
+	\item \monotext{-h} A short flag, usually for calling the help dialogue.
+	\item \monotext{--this-identifier_is#quite+long} Long identifiers can get rather lengthy and use many different separators.
+	\item \monotext{-3}, \monotext{-@} A short flag really can be \emph{any} non-hyphen ASCII charater.
+\end{itemize}
+
+\subsection{Zero-Argument Flags}
+
+Let \monotext{--cat}, \monotext{-c}; \monotext{--dog}, \monotext{-d}; and \monotext{--elephant}, \monotext{-e} be flags that don't need to be specified with any value to make sense. libClame allows you to combine the short flags into one compounded expression; the series \monotext{--cat --dog --elephant} means the same thing as \monotext{-cde}.
+
+\subsection{Single-Argument Flags}
+
+Let \monotext{--ants [VALUE]}, \monotext{-a [VALUE]} and \monotext{--bats [VALUE]}, \monotext{-b [VALUE]} be flags that take one value respectively. Then, the following strings are all equivalent:
+
+\begin{itemize}
+	\item \monotext{--ants [VALUE1] --bats [VALUE2]}, using spaces.
+	\item \monotext{--ants=[VALUE1] --bats=[VALUE2]}, using equals-to signs.
+	\item \monotext{-a [VALUE1] -b [VALUE2]}, using short flags and spaces.
+	\item \monotext{-a[VALUE1] -b[VALUE2]}, using short flags without spaces.
+\end{itemize}
+
+Furthermore, when combined with argument-less flags, \monotext{--cat --ants=[VALUE1] --dog --bats=[VALUE2]} means the same thing as \monotext{-ca[VALUE] -db[VALUE]`}.
+
+\subsection{Multi-Argument Flags}
+
+Let \monotext{--pigeons [VALUE1] [VALUE2] ...} be a flag that takes a series of arguments to make sense. The end of an array of arguments can be signalled implicitly by the presence of another flag or an argument that would be incompatible with \monotext{--pigeons}. (Say, for example, if we see a text string while the values are supposed to be integers.) Alternatively, it can be explicitly specified by the sequence \monotext{--} after the arguments.
+
+In keeping with the syntax of single-argument flags, the following mean the same things:
+
+\begin{itemize}
+	\item \monotext{--pigeons [VALUE1] [VALUE2] [...]}, using a space.
+	\item \monotext{--pigeons=[VALUE1] [VALUE2] [...]}, using an equals-to sign.
+	\item \monotext{-p [VALUE1] [VALUE2] [...]}, using a short flag and a space.
+	\item \monotext{-p[VALUE1] [VALUE2] [...]}, using a short flag and no space.
+\end{itemize}
+
+\subsubsection{\monotext{--} String Edge Case}
+As an edge case, if the arguments \monotext{--pigeons} takes are generic strings, then the end of the array can only be interpreted by the sequence \monotext{--} Furthermore, if you actually wanted to pass a \monotext{--} as a string to \monotext{--pigeons}, you would do it as either: \monotext{--pigeons=-- [OTHER VALUES]} or \monotext{-p-- [OTHER VALUES]}.
+
+\subsection{Flagless Arguments}
+
+Arguments following flags that either don't take values or arguments that don't make sense to analyse as values for a flag are called flagless arguments and get stored separately. These are often used to specify things like input files to a program. However, the fact that many filenames can begin with hyphens leads to them potentially being mistaken for a flag. In this case, the end of flags can be explicitly specified by the sequence \monotext{--}, after which all arguments are taken to be flagless arguments. And if you're specifying both the end of an array of values and the end of the flags, then you will need two \monotext{--} sequences consecutively. For example: \monotext{--pigeons=[VALUE1] [VALUE2] -- -- [FLAGLESS ARGUMENTS]}.

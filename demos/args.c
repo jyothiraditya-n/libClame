@@ -1,6 +1,5 @@
 /* libClame: Command-line Arguments Made Easy
  * Copyright (C) 2021-2023 Jyothiraditya Nellakra
- * Demonstration Program for <LC_args.h>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -18,8 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <LC.h>
-#include <LC_args.h>
+#include <libClame.h>
 
 /* We have some different variables to demonstrate the things that the library
  * can handle, as well as the way that someone might go about implementing
@@ -32,6 +30,7 @@ char *message = NULL;
 
 /* We need to pass ints through sscanf() and so this will get entered a little
  * differently. However, it also demonstrates how arrays work. */
+int secret = 0;
 int *ints = NULL;
 size_t ints_length = 0;
 
@@ -46,8 +45,8 @@ char **files;
 size_t files_length;
 
 /* These helper functions are specified as part of the arguments structure. */
-int about_flag();
-int help_flag();
+int about_flag(LC_flag_t *flag);
+int help_flag(LC_flag_t *flag);
 
 /* Whether we're printing the help and exiting normally or printing the help
  * because we encountered an error, we are basically printing the same thing so
@@ -56,7 +55,7 @@ void help_and_return(int ret);
 
 /* We want an array of the structure for the arguments. This can be specified,
  * as shown here, within C syntax. */
-LCa_flag_t args[] = {
+LC_flag_t args[] = {
 	/* The variables are: long_flag, short_flag, function, var_ptr,
 	 * var_type, value, fmt_string, arr_length, var_length, min_arr_length,
 	 * max_arr_length, readonly. */
@@ -68,19 +67,23 @@ LCa_flag_t args[] = {
 	{"help", 'h', help_flag, NULL, 0, 0, NULL, NULL, 0, 0, 0, 0},
 	
 	/* --flag, -f: sets the flag to true. */
-	{"flag", 'f', NULL, &flag, LCA_BOOL_VAR, true, NULL, NULL, 0, 0, 0,
+	{"flag", 'f', NULL, &flag, LC_BOOL_VAR, true, NULL, NULL, 0, 0, 0,
 		false},
 	
 	/* --message, -m MESSAGE: sets the message. */
-	{"message", 'm', NULL, &message, LCA_STRING_VAR, 0, NULL, NULL, 0, 0,
+	{"message", 'm', NULL, &message, LC_STRING_VAR, 0, NULL, NULL, 0, 0,
 		0, false},
 
+	/* --secret, -s INT: set the secret number. */
+	{"secret", 's', NULL, &secret, LC_OTHER_VAR, 0, "%d", NULL,
+		sizeof(int), 0, SIZE_MAX, false},
+
 	/* --ints, -i INTS: set the ints. */
-	{"ints", 'i', NULL, &ints, LCA_OTHER_VAR, 0, "%d", &ints_length,
+	{"ints", 'i', NULL, &ints, LC_OTHER_VAR, 0, "%d", &ints_length,
 		sizeof(int), 0, SIZE_MAX, false},
 
 	/* --coords, -c COORDS: set the coords. (2 or 3 values only.) */
-	{"coords", 'c', NULL, &coords, LCA_OTHER_VAR, 0, "%lf", &coords_length,
+	{"coords", 'c', NULL, &coords, LC_OTHER_VAR, 0, "%lf", &coords_length,
 		sizeof(double), 2, 3, false}
 };
 
@@ -93,24 +96,24 @@ int main(int argc, char **argv) {
 	/* Get the library to process our args and print out the help dialogue
 	 * on a non-system (usage) error. If there is a memory error, then go
 	 * ahead and print out an appropriate error message. */
-	int ret = LCa_read(argc, argv);
+	int ret = LC_read(argc, argv);
 	
 	switch(ret) {
-	case LCA_OK: break;
+	case LC_OK: break;
 
-	case LCA_MALLOC_ERR:
-		printf("%s: error allocating memory.\n", LCa_prog_name);
-		perror(LCa_prog_name); // More precise report from cstdlib.
+	case LC_MALLOC_ERR:
+		printf("%s: error allocating memory.\n", LC_prog_name);
+		perror(LC_prog_name); // More precise report from cstdlib.
 		break;
 
 	default:
-		help_and_return(1);
+		help_and_return(ret);
 	}
 
 	/* Fetch the flagless arguments that the library has collected for us
 	 * along with the count of how many there are. */
-	files = LCa_flagless_args;
-	files_length = LCa_flagless_args_length;
+	files = LC_flagless_args;
+	files_length = LC_flagless_args_length;
 
 	/* The flag is set to either true or false, so set or unset. The
 	 * message is just a boring old string. */
@@ -119,6 +122,8 @@ int main(int argc, char **argv) {
 	/* Check that the message is not NULL as we don't want to pass a NULL
 	 * to printf if the message has not been set. */
 	if(message) printf("  Message: %s\n", message);
+
+	if(secret) printf("  Secret: %d\n", secret);
 	
 	/* The integers, coords and files all follow the same pattern, where
 	 * we just want to print them out as a list following a header and then
@@ -148,7 +153,9 @@ int main(int argc, char **argv) {
 	exit(0);
 }
 
-int about_flag() {
+int about_flag(LC_flag_t *flag) {
+	(void) flag; // We don't need this variable.
+
 	putchar('\n');
 	puts("  libClame: Command-line Arguments Made Easy");
 	puts("  Copyright (C) 2021-2023 Jyothiraditya Nellakra");
@@ -171,14 +178,16 @@ int about_flag() {
 	return 0; // Never actually returns.
 }
 
-int help_flag() {
+int help_flag(LC_flag_t *flag) {
+	(void) flag; // We don't need this variable.
+
 	help_and_return(0);
 	return 0; // Never actually returns.
 }
 
 void help_and_return(int ret) {
 	putchar('\n');
-	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", LCa_prog_name);
+	printf("  Usage: %s [OPTIONS] [--] [FILES]\n\n", LC_prog_name);
 
 	puts("  Valid options are:");
 	puts("    -a, --about  print the about dialogue");
@@ -186,6 +195,7 @@ void help_and_return(int ret) {
 
 	puts("    -f, --flag                  set the flag");
 	puts("    -m, --message MESSAGE       set the message to MESSAGE");
+	puts("    -s, --secret INT            set the secret to INT");
 	puts("    -i, --ints INTS... [--]     set the ints to INTS");
 	puts("    -c, --coords COORDS... [--] set the coords to COORDS\n");
 
