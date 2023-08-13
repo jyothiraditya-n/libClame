@@ -13,7 +13,7 @@
 % You should have received a copy of the GNU General Public License along with
 % this program. If not, see <https://www.gnu.org/licenses/>.
 
-\section{Annotated Version of the \mintinline{bash}{libClame.h} Headerfile.}
+\section{Annotated Version of the \mintinline{bash}{LC_macros.h} Headerfile.}
 
 You can use these macros in your program by including the \mintinline{bash}{LC_macros.h} header file.\footnotemark This section is an annotated version of this header file. For all of these macros, \monoc{lflag} needs to be a string constant, \monoc{sflag} needs to be a char constant.
 
@@ -22,7 +22,7 @@ You can use these macros in your program by including the \mintinline{bash}{LC_m
 }
 
 \subsection{Flag to Call a Function}
-This macro lets you make a flag that calls a helper function you have defined in your code. \monoc{func} needs to be of type \monoc{int func(LC_flag_t *flag}.\footnotemark
+This macro lets you make a flag that calls a helper function you have defined in your code. \monoc{func} needs to be of type \monoc{int func(LC_flag_t *flag)}.\footnotemark
 
 \footnotetext{See Section \ref{sec:callback-function}.}
 
