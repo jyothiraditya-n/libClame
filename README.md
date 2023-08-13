@@ -1,6 +1,8 @@
 # libClame Version 1.1: Command-Line Arguments Made Easy
 by Jyothiraditya Nellakra
 
+![workflow status](https://github.com/jyothiraditya-n/libClame/actions/workflows/c-cpp.yml/badge.svg)
+
 # About
 
 This library is a C-language implementation of a parser for command-line arguments passed in a UNIX-like syntax. It should be flexible enough to meet most of your needs, along with extensibility through function callbacks to user-specied code.
