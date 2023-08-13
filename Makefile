@@ -15,10 +15,12 @@
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
 # Make sure that config runs before making anything.
-ifeq ($(shell [ -d "config/" ] && echo "config"),)
+ifeq ($(shell [ -d ".config/" ] && echo "config"),)
 ifeq ($(filter config,$(MAKECMDGOALS)),)
-$(info *** Configuration missing; running `make config'.)
-$(shell make config)
+ifeq ($(filter autoconfig,$(MAKECMDGOALS)),)
+$(info *** Configuration missing; running `make autoconfig'.)
+$(shell make autoconfig)
+endif
 endif
 endif
 
@@ -26,35 +28,36 @@ endif
 .DEFAULT_GOAL = debug
 
 # Compilation Flags for C
-CC = $(shell cat config/cc.conf)
+CC = $(shell cat .config/cc.conf)
 
 ifneq ($(filter release,$(MAKECMDGOALS)),)
-CFLAGS = $(shell cat config/cflags_release.conf)
+CFLAGS = $(shell cat .config/cflags_release.conf)
 else
-CFLAGS = $(shell cat config/cflags_debug.conf)
+CFLAGS = $(shell cat .config/cflags_debug.conf)
 endif
 
 # Compilation Flags for Linking
-LD = $(shell cat config/ld.conf)
-AR = $(shell cat config/ar.conf)
+LD = $(shell cat .config/ld.conf)
+AR = $(shell cat .config/ar.conf)
 
-LD_LIBS = $(shell cat config/ld_libs.conf)
+LD_LIBS = $(shell cat .config/ld_libs.conf)
 
 # Command to make the LaTeX docs.
 ifneq ($(filter release,$(MAKECMDGOALS)),)
-LATEX = $(shell cat config/latex_release.conf)
+LATEX = $(shell cat .config/latex_release.conf)
 else
-LATEX = $(shell cat config/latex_debug.conf)
+LATEX = $(shell cat .config/latex_debug.conf)
 endif
 
 # Files that need to be created.
 folders = build/ build/docs/ build/src/
 
-build_scripts = $(wildcard scripts/*.sh)
+build_scripts = $(wildcard *.sh)
 test_scripts = $(wildcard tests/*.sh)
 scripts = $(build_scripts) $(test_scripts)
 
 texs = $(patsubst demos/%.c,build/docs/%.c.tex,$(wildcard demos/*.c))
+docs = $(texs) $(wildcard docs/*)
 headers = $(wildcard inc/*.h)
 
 objs = $(patsubst src/%.c,build/src/%.o,$(wildcard src/*.c))
@@ -71,7 +74,7 @@ $(scripts) : % :
 	chmod +x $@
 
 $(texs) : build/docs/%.c.tex : demos/%.c $(build_scripts) | build/docs/texs.tex
-	scripts/c-to-tex.sh $< $@ build/docs/texs.tex
+	./c-to-tex.sh $< $@ build/docs/texs.tex
 
 $(objs) : build/src/%.o : src/%.c $(headers) | build/src/
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -91,17 +94,20 @@ build/docs/texs.tex : | build/docs/
 build/libClame.a : $(objs)
 	$(AR) -r build/libClame.a $(objs)
 
-build/libClame.pdf : $(texs)
+build/libClame.pdf : $(docs)
 	mkdir -p build/docs/
 	cp docs/* build/docs/
 	cd build/docs/; $(LATEX)
 	mv build/docs/main.pdf build/libClame.pdf
 
 # Commands
-.PHONY : config release debug demos docs test clean deep-clean
+.PHONY : config autoconfig release debug demos docs test clean deep-clean
 
 config : $(build_scripts)
-	scripts/configure.sh
+	./configure.sh
+
+autoconfig : $(build_scripts)
+	./configure.sh -auto
 
 release : build/libClame.a
 
@@ -115,13 +121,13 @@ clean :
 	-rm -r build/
 
 deep-clean : clean
-	-rm -r config/
+	-rm -r .config/
 
 # Testing requires a little bit of hacky coding.
 runnable_tests = $(patsubst %,run-%,$(test_scripts))
 
 .PHONY : $(runnable_tests)
-$(runnable_tests) : run-% : % $(demos) $(tests)
+$(runnable_tests) : run-% : % $(tests)
 	$<
 
 test : $(runnable_tests)

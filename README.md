@@ -1,4 +1,4 @@
-# libClame Version 1.0: Command-Line Arguments Made Easy
+# libClame Version 1.1: Command-Line Arguments Made Easy
 by Jyothiraditya Nellakra
 
 # About

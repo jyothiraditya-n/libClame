@@ -15,6 +15,10 @@
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
 #include <assert.h>
+
+#define LC_REQ_VER 1
+#define LC_REQ_SUBVER 0
+
 #include <libClame.h>
 
 int dummy_var = 0;

@@ -1,3 +1,18 @@
+% libClame: Command-line Arguments Made Easy
+% Copyright (C) 2021-2023 Jyothiraditya Nellakra
+%
+% This program is free software: you can redistribute it and/or modify it under
+% the terms of the GNU General Public License as published by the Free Software
+% Foundation, either version 3 of the License, or (at your option) any later 
+% version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License along with
+% this program. If not, see <https://www.gnu.org/licenses/>.
+
 \section{Compiling, Building \& Linking}
 
 This library is linked statically into your program binary, with the \monotext{.o} object files being held in the \monotext{libClame.a} archive file. This file can be passed to the linker \monotext{ld} (or your C compiler \monotext{cc}, which then sends it to \monotext{ld}) by use of the \monotext{-L<dir> -lClame} flags, where \monotext{dir} is the directory of the compiled binary. As for the header files, they are stored within the \monotext{inc/} folder.

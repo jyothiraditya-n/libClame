@@ -17,7 +17,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define LC_REQ_VER 1
+#define LC_REQ_SUBVER 1
+
 #include <libClame.h>
+#include <LC_macros.h>
 
 /* We have some different variables to demonstrate the things that the library
  * can handle, as well as the way that someone might go about implementing
@@ -56,35 +60,26 @@ void help_and_return(int ret);
 /* We want an array of the structure for the arguments. This can be specified,
  * as shown here, within C syntax. */
 LC_flag_t args[] = {
-	/* The variables are: long_flag, short_flag, function, var_ptr,
-	 * var_type, value, fmt_string, arr_length, var_length, min_arr_length,
-	 * max_arr_length, readonly. */
-
 	/* --about, -a: prints the about dialogue. */
-	{"about", 'a', about_flag, NULL, 0, 0, NULL, NULL, 0, 0, 0, 0},
+	LC_MAKE_CALL("about", 'a', about_flag),
 	
 	/* --help, -h: prints the help dialogue. */
-	{"help", 'h', help_flag, NULL, 0, 0, NULL, NULL, 0, 0, 0, 0},
+	LC_MAKE_CALL("help", 'h', help_flag),
 	
 	/* --flag, -f: sets the flag to true. */
-	{"flag", 'f', NULL, &flag, LC_BOOL_VAR, true, NULL, NULL, 0, 0, 0,
-		false},
-	
+	LC_MAKE_BOOL("flag", 'f', flag, true),
+
 	/* --message, -m MESSAGE: sets the message. */
-	{"message", 'm', NULL, &message, LC_STRING_VAR, 0, NULL, NULL, 0, 0,
-		0, false},
+	LC_MAKE_STRING("message", 'm', message),
 
 	/* --secret, -s INT: set the secret number. */
-	{"secret", 's', NULL, &secret, LC_OTHER_VAR, 0, "%d", NULL,
-		sizeof(int), 0, SIZE_MAX, false},
+	LC_MAKE_VAR("secret", 's', secret, "%d"),
 
 	/* --ints, -i INTS: set the ints. */
-	{"ints", 'i', NULL, &ints, LC_OTHER_VAR, 0, "%d", &ints_length,
-		sizeof(int), 0, SIZE_MAX, false},
+	LC_MAKE_ARR("ints", 'i', ints, "%d", ints_length),
 
 	/* --coords, -c COORDS: set the coords. (2 or 3 values only.) */
-	{"coords", 'c', NULL, &coords, LC_OTHER_VAR, 0, "%lf", &coords_length,
-		sizeof(double), 2, 3, false}
+	LC_MAKE_ARR_BOUNDED("coords", 'c', coords, "%lf", coords_length, 2, 3)
 };
 
 int main(int argc, char **argv) {

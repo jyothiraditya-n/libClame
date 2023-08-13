@@ -1,12 +1,39 @@
+% libClame: Command-line Arguments Made Easy
+% Copyright (C) 2021-2023 Jyothiraditya Nellakra
+%
+% This program is free software: you can redistribute it and/or modify it under
+% the terms of the GNU General Public License as published by the Free Software
+% Foundation, either version 3 of the License, or (at your option) any later 
+% version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License along with
+% this program. If not, see <https://www.gnu.org/licenses/>.
+
 \section{Annotated Version of the \mintinline{bash}{libClame.h} Headerfile.}
 
-You can use this libarry in your program by including the \mintinline{bash}{libClame.h} header file. As such, this reference document provides an annotated version of this header file as a guide to how you should set up your C code.
+You can use this library in your program by including the \mintinline{bash}{libClame.h} header file. As such, this reference document provides an annotated version of this header file as a guide to how you should set up your C code.
 
 \subsection{Version Information}
 
 \begin{minted}{c}
 #define LC_VERSION 1 /* Incremented when backwards compatibility is broken. */
 #define LC_SUBVERSION 0 /* Incremented when new features are added. */
+
+#ifdef LC_REQ_VER
+#if LC_REQ_VER != LC_VERSION
+#error "Incorrect libClame version."
+#endif
+#endif
+
+#ifdef LC_REQ_SUBVER
+#if LC_REQ_SUBVER > LC_SUBVERSION
+#error "Incorrect libClame subversion."
+#endif
+#endif
 \end{minted}
 
 \subsection{Useful Macros}
@@ -34,12 +61,17 @@ The long flag is what you specify when you type \mintinline{bash}{--<something>}
 \end{minted}
 
 \subsubsection{Callback Function}
+\label{sec:callback-function}
 
 If you have a function that takes a flag pointer and returns an integer, you can point to it here to be run when the flag is found. If you don't have anything you want to run, set the pointer to \monoc{NULL} so that we can detect that and avoid causing a segfault.\footnotemark
 
 \footnotetext{
 	Note about pointers: While we do check that you're not giving us \monoc{NULL} pointers in places where it wouldn't make sense, we can't check that the memory it points to is either what it should be, or that it is even a place in memory that can be written to. Such is the nature of the C programming language, so make sure you're double-checking your code.
 }
+
+\subsubsection*{Changes in Version 1.1 to Callback Functions}
+
+Starting with Version 1.1 of libClame, callback functions are called after a given flag's variable is found rather than before. If there is no variable setting specified in the function, the behaviour is the same as Version 1.0.
 
 \begin{minted}{c}
 	int (*function)(struct LC_flag_s *flag);

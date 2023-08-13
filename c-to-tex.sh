@@ -31,4 +31,4 @@
 }	> "$2" || exit $?
 
 # Add the produced output as an include to a listings file.
-printf "%s\n" "\input{$(basename "$2")}" >> "$3" || exit $?
+printf "%s\n" "\include{$(basename "$2")}" >> "$3" || exit $?

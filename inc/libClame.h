@@ -20,9 +20,21 @@
 
 /* Version Information */
 #define LC_VERSION 1 /* Incremented when backwards compatibility broken. */
-#define LC_SUBVERSION 0 /* Incremented when new features added. */
+#define LC_SUBVERSION 1 /* Incremented when new features added. */
 
-/* Useful Macros */
+/* Bad version number. */
+#ifdef LC_REQ_VER
+#if LC_REQ_VER != LC_VERSION
+#error "Incorrect libClame version."
+#endif
+#endif
+
+/* Bad subversion number. */
+#ifdef LC_REQ_SUBVER
+#if LC_REQ_SUBVER > LC_SUBVERSION
+#error "Incorrect libClame subversion."
+#endif
+#endif
 
 /* Get the length of a statically-defined array: */
 #define LC_ARRAY_LENGTH(array) (sizeof(array) / sizeof(*array))
