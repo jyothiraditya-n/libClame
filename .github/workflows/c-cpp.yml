@@ -12,6 +12,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: configure
-      run: make configure
+      run: make autoconfig
     - name: test
       run: make test
