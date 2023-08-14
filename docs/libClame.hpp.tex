@@ -1,0 +1,172 @@
+% libClame: Command-line Arguments Made Easy
+% Copyright (C) 2021-2023 Jyothiraditya Nellakra
+%
+% This program is free software: you can redistribute it and/or modify it under
+% the terms of the GNU General Public License as published by the Free Software
+% Foundation, either version 3 of the License, or (at your option) any later 
+% version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License along with
+% this program. If not, see <https://www.gnu.org/licenses/>.
+
+\section{Annotated Version of the \mintinline{bash}{libClame.hpp} Headerfile.}
+
+You can use this library in your program by including the \mintinline{bash}{libClame.hpp} header file.\footnotemark As such, this reference document provides an annotated version of this header file as a guide to how you should set up your C++ code. It is still worth reading through the documentation for \mintinline{bash}{libClame.h} in Section \ref{sec:libClame.h}, so you can understand the way the C code is set up if you ever need to fall back on it. However, we will also touch upon some parts of that codebase here, where it is useful.
+
+Code and structures that are from C use the convention of starting with the characters \monoc{LC_} while identifiers from C++ land are placed into the namespace \monoc{libClame}.
+
+\footnotetext{
+	This requires libClame Version 1.2 or higher.
+}
+
+\subsection{Version Information}
+
+\begin{minted}{c}
+#define LC_VERSION 1 /* Incremented when backwards compatibility is broken. */
+#define LC_SUBVERSION 2 /* Incremented when new features are added. */
+
+#ifdef LC_REQ_VER
+#if LC_REQ_VER != LC_VERSION
+#error "Incorrect libClame version."
+#endif
+#endif
+
+#ifdef LC_REQ_SUBVER
+#if LC_REQ_SUBVER > LC_SUBVERSION
+#error "Incorrect libClame subversion."
+#endif
+#endif
+\end{minted}
+
+\subsection{The \monoc{LC_flag_t} Structure}
+
+Each flag that we process has properties specified by an \monoc{LC_flag_t} struct. A run down of what all of the properties do and mean is written in the comments within the structure definition itself \mintinline{bash}{libClame.h}. For further information see Section \ref{sec:LC_flag_t}.
+
+If you are not digging into the nitty-gritty of things, you can just create a \monoc{std::vector} of \monoc{LC_flag_t} and push flags into it in the main function via the helper functions defined in this header.
+
+\subsubsection{Callback Function}
+\label{sec:c++callback-function}
+
+If you have a function that is associated with a certain flag, you can specify it with the type \monoc{callback_t}, taking no arguments and returning nothing either. In order for this function to indicate an error, it must throw an exception, which will be caught by our error handler.
+
+\begin{minted}{c++}
+	typedef std::function<void()> callback_t;
+\end{minted}
+
+\subsection{Flag to Call a Function}
+This macro lets you make a flag that calls a helper function you have defined in your code. \monoc{func} needs to be of type \monoc{libClame::callback_t}.\footnotemark
+
+\footnotetext{See Section \ref{sec:c++callback-function}.}
+
+\begin{minted}{c++}
+	extern LC_flag_t make_call(
+		std::string lflag, char sflag, callback_t function
+	);
+\end{minted}
+
+\subsection{Flag to Set a Boolean to a Given Value}
+This macro lets you make a flag to set a boolean to a given value. \monoc{var} needs to be of declared as type \monoc{bool} and \monoc{val} needs to be a boolean constant.
+
+\begin{minted}{c++}
+	extern LC_flag_t make_bool(
+		std::string lflag, char sflag, bool& var, bool val,
+		std::optional<callback_t> function
+	);
+\end{minted}
+
+\subsection{Flags to Get Config String(s)}
+This macro lets you make a flag to set either a string or an array of strings.
+
+\begin{minted}{c++}
+	extern LC_flag_t make_string(
+		std::string lflag, char sflag, std::string& string,
+		std::optional<callback_t> function
+	);
+
+	typedef std::tuple<size_t, size_t> limits_t;
+
+	extern LC_flag_t make_str_arr(
+		std::string lflag, char sflag, std::list<std::string>& strings,
+		std::optional<limits_t> limits,
+		std::optional<callback_t> function
+	);
+
+	extern LC_flag_t make_str_arr(
+		std::string lflag, char sflag,
+		std::vector<std::string>& strings,
+		std::optional<limits_t> limits,
+		std::optional<callback_t> function
+	);
+\end{minted}
+
+\subsubsection{\monoc{limits_t}}
+\label{sec:limits_t}
+
+The bounds checking for arrays is implemented through a tuple that contains the minimum and maximum permissible lengths for the array.
+
+\subsection{Calling the Parsing Function}
+
+Once you have set up the flags as described above, you can call the \monoc{libClame::read()} function to process your command line arguments.
+
+\begin{minted}{c++}
+extern void read(int argc, char** argv, std::vector<LC_flag_t>& flags);
+\end{minted}
+
+\subsection{Returned Values}
+
+\subsubsection{Error Codes}
+
+Upon encountering an error, \monoc{libClame::read()} throws an exception with the following type.
+
+\begin{minted}{c++}
+	class exception : std::exception {
+	public:
+		explicit exception(int error);
+		virtual ~exception() noexcept;
+		virtual const char *what() const noexcept;
+		int error;
+	};
+\end{minted}
+
+The following are the meanings of value stored in \monoc{error}.
+
+\begin{minted}{c++}
+#define LC_OK              0  // No errors occurred.
+#define LC_NO_ARGS         1  // LC_flags is a NULL pointer.
+#define LC_MALLOC_ERR      2  // malloc() returned a NULL pointer.
+
+#define LC_BAD_FLAG        3  // A malformed flag was supplied to the program.
+#define LC_VAR_RESET       4  // A variable was set twice on the command line.
+#define LC_NO_VAL          5  // No value was supplied to a flag that sets a variable.
+#define LC_BAD_VAL         6  // A malformed value was supplied.
+#define LC_LESS_VALS       7  // Fewer values were supplied than the flag accepts.
+#define LC_MORE_VALS       8  // More values were supplied than the flag accepts.
+#define LC_FUNC_ERR        9  // A user-defined function returned an error.
+
+#define LC_BAD_VAR_TYPE    10 // The specified flag var_type is invalid.
+#define LC_NULL_FORMAT_STR 11 // A NULL pointer was was given for sscanf.
+\end{minted}
+
+\monoc{LC_NO_ARGS} and \monoc{LC_BAD_FLAG} mean that we caught non-fatal errors within the program using libClame, while \monoc{LC_MALLOC_ERR} will be passed on a failure to allocate memory. (This could be a result of memory scarcity, but is probably a result of something going very wrong in libc.) Every other return value is a type of user error at the command-prompt.
+
+You can get the constant name given the numeric value using the \monoc{what()} function of the exception type. If necessary, the behaviour of the \monoc{error} integer and the \monoc{what()} function is identical to the return value of \monoc{LC_read()} and \monoc{LC_strerror} respectively.
+
+\subsubsection{Flagless Arguments}
+
+These variables are set by the \monoc{libCLame::read()} function when it encounters arguments supplied to the program that were not preceded by a flag.
+
+\begin{minted}{c++}
+extern std::vector<std::string> flagless_args;
+\end{minted}
+
+\subsubsection{Program Name}
+
+We also get the program name out of \monoc{argv[0]}.
+
+\begin{minted}{c++}
+extern std::string prog_name;
+\end{minted}

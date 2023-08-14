@@ -14,6 +14,7 @@
 % this program. If not, see <https://www.gnu.org/licenses/>.
 
 \section{Annotated Version of the \mintinline{bash}{libClame.h} Headerfile.}
+\label{sec:libClame.h}
 
 You can use this library in your program by including the \mintinline{bash}{libClame.h} header file. As such, this reference document provides an annotated version of this header file as a guide to how you should set up your C code.
 
@@ -21,7 +22,7 @@ You can use this library in your program by including the \mintinline{bash}{libC
 
 \begin{minted}{c}
 #define LC_VERSION 1 /* Incremented when backwards compatibility is broken. */
-#define LC_SUBVERSION 0 /* Incremented when new features are added. */
+#define LC_SUBVERSION 2 /* Incremented when new features are added. */
 
 #ifdef LC_REQ_VER
 #if LC_REQ_VER != LC_VERSION
@@ -44,6 +45,7 @@ You can use this library in your program by including the \mintinline{bash}{libC
 \end{minted}
 
 \subsection{The \monoc{LC_flag_t} Structure}
+\label{sec:LC_flag_t}
 
 Each flag that we process has properties specified by an \monoc{LC_flag_t} struct. A run down of what all of the properties do and mean is written in the comments within the structure definition itself.
 
@@ -220,6 +222,12 @@ The following are the meanings of the returned values from \monoc{LC_read()}.
 \end{minted}
 
 \monoc{LC_NO_ARGS} and \monoc{LC_BAD_FLAG} mean that we caught non-fatal errors within the program using libClame, while \monoc{LC_MALLOC_ERR} will be passed on a failure to allocate memory. (This could be a result of memory scarcity, but is probably a result of something going very wrong in libc.) Every other return value is a type of user error at the command-prompt.
+
+You can get the constant name given the numeric value using the \monoc{LC_strerr()} function.
+
+\begin{minted}{c}
+extern const char *LC_strerror(int error);
+\end{minted}
 
 \subsubsection{Flagless Arguments}
 

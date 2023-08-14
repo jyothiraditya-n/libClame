@@ -53,6 +53,12 @@ It is possible to bypass the automatic build configuration script and manually s
 	\midrule
 	\monotext{CFLAGS} & \monotext{cflags _debug .conf} & C Build Flags for Debug Mode & \mintinline[breaklines,breakanywhere]{text}{-std=c99 -Wall -Wextra -Werror -Wpedantic -g -Og -Iinc/} \\
 	\midrule
+	\monotext{CPP} & \monotext{cpp.conf} & C++ Compiler Command Name & \monotext{cc} \\
+	\midrule
+	\monotext{CCFLAGS} & \monotext{ccflags _release .conf} & C++ Build Flags for Release Mode & \mintinline[breaklines,breakanywhere]{text}{-std=c++20 -Wall -Wextra -Wpedantic -s -O2 -Iinc/} \\
+	\midrule
+	\monotext{CCFLAGS} & \monotext{ccflags _debug .conf} & C++ Build Flags for Debug Mode & \mintinline[breaklines,breakanywhere]{text}{-std=c++20 -Wall -Wextra -Werror -Wpedantic -g -Og -Iinc/} \\
+	\midrule
 	\monotext{LD} & \monotext{ld.conf} & Linker Command Name & \monotext{ld} \\
 	\midrule
 	\monotext{AR} & \monotext{ar.conf} & Archiver Command Name & \monotext{ar} \\
@@ -66,3 +72,7 @@ It is possible to bypass the automatic build configuration script and manually s
 \end{tabulary}
 \caption{\label{tbl:config-vars}A list of the configuration files used by the build system.}
 \end{table}
+
+\subsection{Getting Started}
+
+If you're using C, then the next sections to look to read are for the \monoc{libClame.h} and \monoc{LC_macros.h} header files. And C++ users should instead look to read \monoc{libClame.hpp} and \monoc{libClame/templates.hpp} files. Later in the documentation there are also source code listings for a few example programs in both languages to help you to get a grasp of things.

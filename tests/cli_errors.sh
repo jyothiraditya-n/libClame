@@ -22,10 +22,10 @@ fmt="  \033[0;1m"
 # Helper function to report errors
 assert_eq() {
 	if [ "$1" -eq "$2" ]; then
-		echo -e "$fmt-> Return value correct.\033[0;0m ✓"
+		echo -e "$fmt-> Return value correct.\033[0;0m ✓\n"
 	else
 		echo -e "$fmt->  Incorrect return value ($1 returned," \
-			"expected $2).\033[0;0m ✘"
+			"expected $2).\033[0;0m ✘\n"
 		exit 1
 	fi
 

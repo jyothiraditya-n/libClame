@@ -36,6 +36,15 @@ else
 CFLAGS = $(shell cat .config/cflags_debug.conf)
 endif
 
+# Compilation Flags for C++
+CPP = $(shell cat .config/cpp.conf)
+
+ifneq ($(filter release,$(MAKECMDGOALS)),)
+CCFLAGS = $(shell cat .config/ccflags_release.conf)
+else
+CCFLAGS = $(shell cat .config/ccflags_debug.conf)
+endif
+
 # Compilation Flags for Linking
 LD = $(shell cat .config/ld.conf)
 AR = $(shell cat .config/ar.conf)
@@ -56,13 +65,25 @@ build_scripts = $(wildcard *.sh)
 test_scripts = $(wildcard tests/*.sh)
 scripts = $(build_scripts) $(test_scripts)
 
-texs = $(patsubst demos/%.c,build/docs/%.c.tex,$(wildcard demos/*.c))
-docs = $(texs) $(wildcard docs/*)
-headers = $(wildcard inc/*.h)
+c_texs = $(patsubst demos/%.c,build/docs/%.c.tex,$(wildcard demos/*.c))
+cpp_texs = $(patsubst demos/%.cpp,build/docs/%.cpp.tex,$(wildcard demos/*.cpp))
+texs = $(c_texs) $(cpp_texs)
 
-objs = $(patsubst src/%.c,build/src/%.o,$(wildcard src/*.c))
-demos = $(patsubst demos/%.c,build/%_demo,$(wildcard demos/*.c))
-tests = $(patsubst tests/%.c,build/%_test,$(wildcard tests/*.c))
+docs = $(texs) $(wildcard docs/*)
+headers = $(wildcard inc/*.h) $(wildcard inc/libClame/*.h)
+headers = $(wildcard inc/*.hpp) $(wildcard inc/libClame/*.hpp)
+
+c_objs = $(patsubst src/%.c,build/src/%.o,$(wildcard src/*.c))
+cpp_objs = $(patsubst src/%.cpp,build/src/%_cpp.o,$(wildcard src/*.cpp))
+objs = $(c_objs) $(cpp_objs)
+
+c_demos = $(patsubst demos/%.c,build/%_demo,$(wildcard demos/*.c))
+cpp_demos += $(patsubst demos/%.cpp,build/%_cpp_demo,$(wildcard demos/*.cpp))
+demos = $(c_demos) $(cpp_demos)
+
+c_tests = $(patsubst tests/%.c,build/%_test,$(wildcard tests/*.c))
+cpp_tests += $(patsubst tests/%.cpp,build/%_cpp_test,$(wildcard tests/*.cpp))
+tests = $(c_tests) $(cpp_tests)
 
 # Automatic Rules for creating those files.
 $(folders) : % :
@@ -73,17 +94,31 @@ $(folders) : % :
 $(scripts) : % :
 	chmod +x $@
 
-$(texs) : build/docs/%.c.tex : demos/%.c $(build_scripts) | build/docs/texs.tex
-	./c-to-tex.sh $< $@ build/docs/texs.tex
+$(c_texs) : build/docs/%.c.tex : demos/%.c $(build_scripts) | \
+	build/docs/texs.tex
+	./make_tex.sh "c" $< $@ build/docs/texs.tex
 
-$(objs) : build/src/%.o : src/%.c $(headers) | build/src/
+$(cpp_texs) : build/docs/%.cpp.tex : demos/%.cpp $(build_scripts) | \
+	build/docs/texs.tex
+	./make_tex.sh "cpp" $< $@ build/docs/texs.tex
+
+$(c_objs) : build/src/%.o : src/%.c $(headers) | build/src/
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(demos) : build/%_demo : demos/%.c $(headers) build/libClame.a
+$(cpp_objs) : build/src/%_cpp.o : src/%.cpp $(headers) | build/src/
+	$(CPP) $(CCFLAGS) -c $< -o $@
+
+$(c_demos) : build/%_demo : demos/%.c $(headers) build/libClame.a
 	$(CC) $(CFLAGS) $< -o $@ $(LD_LIBS)
 
-$(tests) : build/%_test : tests/%.c $(headers) build/libClame.a
+$(cpp_demos) : build/%_cpp_demo : demos/%.cpp $(headers) build/libClame.a
+	$(CPP) $(CCFLAGS) $< -o $@ $(LD_LIBS)
+
+$(c_tests) : build/%_test : tests/%.c $(headers) build/libClame.a
 	$(CC) $(CFLAGS) $< -o $@ $(LD_LIBS)
+
+$(cpp_tests) : build/%_cpp_test : tests/%.cpp $(headers) build/libClame.a
+	$(CPP) $(CCFLAGS) $< -o $@ $(LD_LIBS)
 
 # Other, manually defined recipes.
 .PHONY : build/docs/texs.tex

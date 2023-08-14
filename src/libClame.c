@@ -464,16 +464,16 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 		 * give us the number of bytes processed. */
 		size_t fmt_len = strlen(flag -> fmt_string);
 
-		char fmt_debug[fmt_len + 3];
+		char fmt_debug[fmt_len + 4];
 		fmt_debug[0] = 0;
 
 		strncat(fmt_debug, flag -> fmt_string, fmt_len);
-		strncat(fmt_debug, "%n", 2);
+		strncat(fmt_debug, "%zn", 3);
 
-		int bytes = 0;
+		size_t bytes = 0;
 		int ret = sscanf(value, fmt_debug, flag -> var_ptr, &bytes);
 		
-		if(ret != 1 || (size_t) bytes != strlen(value)) {
+		if(ret != 1 || bytes != strlen(value)) {
 			fprintf(stderr, "%s: error: the string `%s' is "
 				"invalid for the flag", LC_prog_name, value
 			);
@@ -504,16 +504,16 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 		if(!flag -> fmt_string) return LC_NULL_FORMAT_STR;
 		size_t fmt_len = strlen(flag -> fmt_string);
 
-		char fmt_debug[fmt_len + 3];
+		char fmt_debug[fmt_len + 4];
 		fmt_debug[0] = 0;
 
 		strncat(fmt_debug, flag -> fmt_string, fmt_len);
-		strncat(fmt_debug, "%n", 2);
+		strncat(fmt_debug, "%zn", 3);
 
-		int bytes = 0;
+		size_t bytes = 0;
 		int ret = sscanf(value, fmt_debug, flag -> var_ptr, &bytes);
 		
-		if(ret != 1 || (size_t) bytes != strlen(value)) {
+		if(ret != 1 || bytes != strlen(value)) {
 			fprintf(stderr, "%s: error: the string `%s' is "
 				"invalid for the flag", LC_prog_name, value
 			);
@@ -536,18 +536,18 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 	if(!flag -> fmt_string) return LC_NULL_FORMAT_STR;
 	size_t fmt_len = strlen(flag -> fmt_string);
 
-	char fmt_debug[fmt_len + 3];
+	char fmt_debug[fmt_len + 4];
 	fmt_debug[0] = 0;
 
 	strncat(fmt_debug, flag -> fmt_string, fmt_len);
-	strncat(fmt_debug, "%n", 2);
+	strncat(fmt_debug, "%zn", 3);
 
-	int bytes = 0;
+	size_t bytes = 0;
 	size_t len = value? strlen(value): 0;
 	int ret = value? sscanf(value, fmt_debug, testing_area, &bytes): 1;
 
 	/* Error out if sscanf() can't read the value. */
-	if(ret != 1 || (size_t) bytes != len) {
+	if(ret != 1 || bytes != len) {
 		fprintf(stderr, "%s: error: the string `%s' is invalid for "
 			"the flag", LC_prog_name, value
 		);
@@ -567,7 +567,7 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 		}
 
 		ret = sscanf(i -> string, fmt_debug, testing_area, &bytes);
-		if(ret != 1 || (size_t) bytes != strlen(i -> string)) break;
+		if(ret != 1 || bytes != strlen(i -> string)) break;
 
 		++*(flag -> arr_length);
 	}
@@ -653,4 +653,28 @@ static void print_flag(LC_flag_t *flag) {
 	else {
 		fprintf(stderr, "'-%c'", flag -> short_flag);
 	}
+}
+
+/* Get error strings. */
+const char *LC_strerror(int error) {
+	/* Return the compile-time constant's name. */
+	switch(error) {
+		case LC_OK: return "LC_OK";
+		case LC_NO_ARGS: return "LC_NO_ARGS";
+		case LC_MALLOC_ERR: return "LC_MALLOC_ERR";
+
+		case LC_BAD_FLAG: return "LC_BAD_FLAG";
+		case LC_VAR_RESET: return "LC_VAR_RESET";
+		case LC_NO_VAL: return "LC_NO_VAL";
+		case LC_BAD_VAL: return "LC_BAD_VAL";
+		case LC_LESS_VALS: return "LC_LESS_VALS";
+		case LC_MORE_VALS: return "LC_MORE_VALS";
+		case LC_FUNC_ERR: return "LC_FUNC_ERR";
+
+		case LC_BAD_VAR_TYPE: return "LC_BAD_VAR_TYPE";
+		case LC_NULL_FORMAT_STR: return "LC_NULL_FORMAT_STR";
+	}
+
+	/* We have an invalid error number. */
+	return "LC_UNKNOWN_ERR";
 }

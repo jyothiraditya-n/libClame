@@ -1,0 +1,52 @@
+% libClame: Command-line Arguments Made Easy
+% Copyright (C) 2021-2023 Jyothiraditya Nellakra
+%
+% This program is free software: you can redistribute it and/or modify it under
+% the terms of the GNU General Public License as published by the Free Software
+% Foundation, either version 3 of the License, or (at your option) any later 
+% version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License along with
+% this program. If not, see <https://www.gnu.org/licenses/>.
+
+\section{Annotated Version of the \mintinline{bash}{libClame/templates.hpp} Headerfile.}
+
+You can use these macros in your program by including the \mintinline{bash}{libClame/templates.hpp} header file.\footnotemark This section is an annotated version of this header file. The contents of this header are placed in the \monoc{libClame} namespace.
+
+\footnotetext{
+	Needs libClame Version 1.2 or better.
+}
+
+\subsection{Flags to Get a Variable or an Array of Other Types}
+This macro lets you make a flag to set any variable or array. \monoc{libClame::callback_t} and \monoc{libClame::limits_t} are declared in the \monoc{libClame.hpp} headerfile. You can read more about them in Section \ref{sec:c++callback-function} and Section \ref{sec:limits_t} respectively.
+
+\monoc{sscanf_fmt} is a format string that can be passed to \monoc{sscanf()}. This can usually be autodetected for common types, but if something isn't working, or you are using a particularly out-there datatype, then you would need to define it manually.
+
+\begin{minted}{c++}
+	template<typename T>
+	extern LC_flag_t make_var(
+		std::string lflag, char sflag, T& var,
+		std::optional<callback_t> function,
+		std::optional<std::string> sscanf_fmt
+	);
+
+	template<typename T>
+	extern LC_flag_t make_arr(
+		std::string lflag, char sflag, std::list<T>& arr,
+		std::optional<libClame::limits_t> limits,
+		std::optional<callback_t> function,
+		std::optional<std::string> sscanf_fmt
+	);
+
+	template<typename T>
+	extern LC_flag_t make_arr(
+		std::string lflag, char sflag, std::vector<T>& arr,
+		std::optional<libClame::limits_t> limits,
+		std::optional<callback_t> function,
+		std::optional<std::string> sscanf_fmt
+	);
+\end{minted}

@@ -17,18 +17,22 @@
 # this program. If not, see <https://www.gnu.org/licenses/>.
 
 # Default values.
+cc="cc"
 cflags_release="-std=c99 -Wall -Wextra -Wpedantic -s -O3 -Iinc/"
 cflags_debug="-std=c99 -Wall -Wextra -Werror -Wpedantic -g -Og -Iinc/"
+
+cpp="c++"
+ccflags_release="-std=c++20 -Wall -Wextra -Wpedantic -s -O2 -Iinc/"
+ccflags_debug="-std=c++20 -Wall -Wextra -Werror -Wpedantic -g -Og -Iinc/"
+
+ld="ld"
+ar="ar"
 ld_libs="-Lbuild/ -lClame"
 
 latex_pre="pdflatex -interaction"
 latex_post="-shell-escape main.tex"
 latex_release="for i in 1, 2; do $latex_pre=batchmode $latex_post; done"
 latex_debug="$latex_pre=nonstopmode $latex_post"
-
-cc="cc"
-ar="ar"
-ld="ld"
 
 # Only read user input if we aren't running in auto mode.
 if [ "$1" != "-auto" ]; then
@@ -39,6 +43,13 @@ if [ "$1" != "-auto" ]; then
 
 	read -p "CFLAGS / C Compiler Flags (Debug Mode)> " -e \
 		-i "$cflags_debug" cflags_debug
+
+	read -p "CPP / C++ Compiler> " -e -i "$cpp" cpp
+	read -p "CCFLAGS / C++ Compiler Flags (Release Mode)> " -e \
+		-i "$cppflags_release" cppflags_release
+
+	read -p "CPPFLAGS / C++ Compiler Flags (Debug Mode)> " -e \
+		-i "$cppflags_debug" cppflags_debug
 
 	# Get information for linking.
 	read -p "LD / Linker> " -e -i "$ld" ld
@@ -62,8 +73,13 @@ echo "$cc" > ".config/cc.conf"
 echo "$cflags_release" > ".config/cflags_release.conf"
 echo "$cflags_debug" > ".config/cflags_debug.conf"
 
+echo "$cpp" > ".config/cpp.conf"
+echo "$ccflags_release" > ".config/ccflags_release.conf"
+echo "$ccflags_debug" > ".config/ccflags_debug.conf"
+
 echo "$ld" > ".config/ld.conf"
 echo "$ar" > ".config/ar.conf"
 echo "$ld_libs" > ".config/ld_libs.conf"
+
 echo "$latex_release" > ".config/latex_release.conf"
 echo "$latex_debug" > ".config/latex_debug.conf"

@@ -20,7 +20,7 @@
 
 /* Version Information */
 #define LC_VERSION 1 /* Incremented when backwards compatibility broken. */
-#define LC_SUBVERSION 1 /* Incremented when new features added. */
+#define LC_SUBVERSION 2 /* Incremented when new features added. */
 
 /* Bad version number. */
 #ifdef LC_REQ_VER
@@ -40,9 +40,9 @@
 #define LC_ARRAY_LENGTH(array) (sizeof(array) / sizeof(*array))
 
 /* Standard Library Includes */
+#include <inttypes.h> // Needed for SIZE_MAX
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 
 /* Flag Information Struct */
 typedef struct LC_flag_s {
@@ -107,6 +107,9 @@ extern int LC_read(int argc, char **argv);
 
 #define LC_BAD_VAR_TYPE 10
 #define LC_NULL_FORMAT_STR 11
+
+/* Get an error string. */
+extern const char *LC_strerror(int error);
 
 /* Non-flag variables encountered during processing. */
 extern char **LC_flagless_args;

@@ -19,16 +19,16 @@
 # Produce a Latex output file, which quotes the input file in a minted code
 # block. Then, add that output file to a listings file.
 
-# To use the script, pass the input file as $1, the output file as $2, and the
-# listings file as $3.
+# To use the script, pass the language as $1, the input file as $2, the output
+# file as $3, and the listings file as $4.
 
 # Produce the Latex file.
 {	printf "%s" "\section{Demo Program Source Listing: "
-	printf "%s\n" "\mintinline{bash}{"$1"}}"
-	printf "%s\n" "\begin{minted}{c}"
-	cat "$1"
+	printf "%s\n" "\mintinline{bash}{$2}}"
+	printf "%s\n" "\begin{minted}{$1}"
+	cat "$2"
 	printf "\n%s\n" "\end{minted}"
-}	> "$2" || exit $?
+}	> "$3" || exit $?
 
 # Add the produced output as an include to a listings file.
-printf "%s\n" "\include{$(basename "$2")}" >> "$3" || exit $?
+printf "%s\n" "\include{$(basename "$3")}" >> "$4" || exit $?
