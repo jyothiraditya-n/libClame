@@ -39,6 +39,9 @@ ccflags="$(cat ".config/ccflags_debug.conf")"
 for i in "$@"; do
 	case "$i" in
 	*.c) (set -x; clang-tidy "$i" -- $cflags);;
-	*.cpp) (set -x; clang-tidy "$i" -- $cflags);;
+	*.cpp) (set -x; clang-tidy "$i" -- $ccflags);;
+
+	*.h) (set -x; clang-tidy "$i" -- $cflags);;
+	*.hpp) (set -x; clang-tidy "$i" -- $ccflags);;
 	esac
 done

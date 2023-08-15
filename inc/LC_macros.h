@@ -34,21 +34,41 @@
 	{lflag, sflag, NULL, &var, LC_BOOL_VAR, val, NULL, NULL, 0, 0, 0, \
 		false}
 
+#define LC_MAKE_BOOL_F(lflag, sflag, var, val, func) \
+	{lflag, sflag, func, &var, LC_BOOL_VAR, val, NULL, NULL, 0, 0, 0, \
+		false}
+
 /* Flags to get config string(s). */
 #define LC_MAKE_STRING(lflag, sflag, var) \
 	{lflag, sflag, NULL, &var, LC_STRING_VAR, 0, NULL, NULL, 0, 0, 0, \
+		false}
+
+#define LC_MAKE_STRING_F(lflag, sflag, var, func) \
+	{lflag, sflag, func, &var, LC_STRING_VAR, 0, NULL, NULL, 0, 0, 0, \
 		false}
 
 #define LC_MAKE_STRING_ARR(lflag, sflag, arr, len) \
 	{lflag, sflag, NULL, &arr, LC_STRING_VAR, 0, NULL, &len, 0, 0, \
 		SIZE_MAX, false}
 
+#define LC_MAKE_STRING_ARR_F(lflag, sflag, arr, len, func) \
+	{lflag, sflag, func, &arr, LC_STRING_VAR, 0, NULL, &len, 0, 0, \
+		SIZE_MAX, false}
+
 #define LC_MAKE_STRING_ARR_BOUNDED(lflag, sflag, arr, len, min_len, max_len) \
 	{lflag, sflag, NULL, &arr, LC_STRING_VAR, 0, NULL, &len, 0, min_len, \
 		max_len, false}
 
+#define LC_MAKE_STRING_ARR_BOUNDED_F(lflag, sflag, arr, len, min, max, func) \
+	{lflag, sflag, func, &arr, LC_STRING_VAR, 0, NULL, &len, 0, min, \
+		max, false}
+
 /* Flags to get a variable or an array of other types. */
 #define LC_MAKE_VAR(lflag, sflag, var, fmt) \
+	{lflag, sflag, NULL, &var, LC_OTHER_VAR, 0, fmt, NULL, sizeof(var), \
+		0, SIZE_MAX, false}
+
+#define LC_MAKE_VAR_F(lflag, sflag, var, fmt, func) \
 	{lflag, sflag, NULL, &var, LC_OTHER_VAR, 0, fmt, NULL, sizeof(var), \
 		0, SIZE_MAX, false}
 
@@ -56,9 +76,17 @@
 	{lflag, sflag, NULL, &arr, LC_OTHER_VAR, 0, fmt, &len, sizeof(*arr), \
 		0, SIZE_MAX, false}
 
+#define LC_MAKE_ARR_F(lflag, sflag, arr, fmt, len, func) \
+	{lflag, sflag, func, &arr, LC_OTHER_VAR, 0, fmt, &len, sizeof(*arr), \
+		0, SIZE_MAX, false}
+
 #define LC_MAKE_ARR_BOUNDED(lflag, sflag, arr, fmt, len, min_len, max_len) \
 	{lflag, sflag, NULL, &arr, LC_OTHER_VAR, 0, fmt, &len, sizeof(*arr), \
 		min_len, max_len, false}
+
+#define LC_MAKE_ARR_BOUNDED_F(lflag, sflag, arr, fmt, len, min, max, func) \
+	{lflag, sflag, func, &arr, LC_OTHER_VAR, 0, fmt, &len, sizeof(*arr), \
+		min, max, false}
 
 /* End Header Guard */
 #endif

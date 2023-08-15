@@ -33,29 +33,25 @@ namespace libClame {
 		std::optional<std::string> sscanf_fmt
 	){
 		/* Make a copy of the flag that won't get mutated. */
-		libClame::__string_table.push_back(std::move(lflag));
+		libClame::__string_list.push_back(std::move(lflag));
 		const auto& c_lflag = (
-			*libClame::__string_table.rbegin()
+			*libClame::__string_list.rbegin()
 		).c_str();
 
 		/* Run the callback code or an empty lambda. */
 		libClame::__call_table[c_lflag] = function.value_or([](){});
 
 		/* Get the format string and store it away. */
-		libClame::__string_table.push_back(
+		libClame::__string_list.push_back(
 			sscanf_fmt.value_or(libClame::__get_fmt<T>())
 		);
 
-		const auto fmt = (*libClame::__string_table.rbegin()).c_str();
+		const auto fmt = (*libClame::__string_list.rbegin()).c_str();
 
-		/* The variables are: long_flag, short_flag, function, var_ptr,
-		* var_type, value, fmt_string, arr_length, var_length,
-		* min_arr_length, max_arr_length, readonly. */
-
-		return LC_flag_t{
-			c_lflag, sflag, libClame::__interceptor, &var,
-			LC_OTHER_VAR, 0, fmt, NULL, sizeof(T), 0, 0, false
-		};
+		/* Make the structure. */
+		return LC_MAKE_VAR_F(
+			c_lflag, sflag, var, fmt, libClame::__interceptor
+		);
 	}
 
 	template<typename T>
@@ -66,7 +62,7 @@ namespace libClame {
 		std::optional<std::string> sscanf_fmt
 	){
 		return libClame::__make_arr(
-			lflag, sflag, arr, limits, function, sscanf_fmt
+			lflag, sflag, &arr, limits, function, sscanf_fmt
 		);
 	}
 
@@ -78,7 +74,7 @@ namespace libClame {
 		std::optional<std::string> sscanf_fmt
 	){
 		return libClame::__make_arr(
-			lflag, sflag, arr, limits, function, sscanf_fmt
+			lflag, sflag, &arr, limits, function, sscanf_fmt
 		);
 	}
 }

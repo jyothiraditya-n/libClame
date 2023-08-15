@@ -37,10 +37,10 @@ std::string string_var; std::list<std::string> string_arr;
 int int_var; std::list<int> int_arr;
 double double_var; std::list<double> double_arr;
 size_t size_var; std::list<size_t> size_arr;
-int32_t int32_var; std::list<int32_t> int32_arr;
+int32_t int32_var; std::vector<int32_t> int32_arr; // note the vector.
 
 uint8_t oct_var; std::list<uint8_t> oct_arr;
-uint8_t hex_var; std::list<uint8_t> hex_arr;
+uint8_t hex_var; std::vector<uint8_t> hex_arr; // note the vector.
 
 typedef struct {char str[9];} filename_t; // 8-char filenames like DOS.
 filename_t filename_var; std::list<filename_t> filename_arr;
@@ -50,10 +50,58 @@ std::list<int> limited_arr; // Arr of only two values.
 /* Arguments list. */
 std::vector<LC_flag_t> flags;
 
+/* Helpers to print the variables out. */
+void print_string(
+	const std::string& var, const std::list<std::string>& arr,
+	const std::string& desc
+){
+	if(var != "") std::cout << desc << "_var = \"" << var << "\"; ";
+
+	if(!arr.size()) return;
+	std::cout << desc << "_arr = {";
+
+	for(const auto &i: arr) std::cout << "\"" << i << "\", ";
+	std::cout << "...}; ";
+}
+
+void print_string(
+	const filename_t &var, const std::list<filename_t>& arr,
+	const std::string& desc
+){
+	/* Convert argument types. */
+	std::list<std::string> strings;
+	for(auto&& i: arr) strings.push_back(i.str);
+
+	/* Call the main helper function. */
+	print_string(var.str, strings, desc);
+}
+
+/* Don't print uint8_t as a character. */
+std::ostream& operator<<(std::ostream& os, const uint8_t& obj){
+	return os << (int) obj;
+}
+
+template<template<typename> typename C, typename T>
+void print_numeric(
+	const T& var, const C<T>& arr, const std::string& desc
+){
+	if(var) std::cout << desc << "_var = " << var << "; ";
+
+	if(!arr.size()) return;
+	std::cout << desc << "_arr = {";
+
+	for(const auto &i: arr) std::cout << i << ", ";
+	std::cout << "...}; ";
+};
+
 int main(int argc, char **argv) {
 	/* Set up our flags. */
 	flags.push_back(make_call("callback", 'c', custom_callback));
 	flags.push_back(make_bool("boolean_var", 'b', boolean_var, true, {}));
+
+	flags.push_back(make_bool(
+		"boolean_callback", '!', boolean_var, true, custom_callback)
+	);
 
 	flags.push_back(make_string("string_var", 's', string_var, {}));
 	flags.push_back(make_str_arr("string_arr", 'S', string_arr, {}, {}));
@@ -88,6 +136,11 @@ int main(int argc, char **argv) {
 		"limited_arr", '2', limited_arr, limits_t{2, 2}, {}, {}
 	));
 
+	flags.push_back(make_arr(
+		"limited_callback", '@', limited_arr, limits_t{2, 2},
+		custom_callback, {}
+	));
+
 	try {
 		libClame::read(argc, argv, flags);
 	}
@@ -101,7 +154,7 @@ int main(int argc, char **argv) {
 				<< ": error allocating memory.\n";
 
 			std::perror(LC_prog_name); // More precise report.
-			break;
+			return e.error;
 
 		default:
 			return e.error;
@@ -111,86 +164,23 @@ int main(int argc, char **argv) {
 	/* Print all the values that were set. */
 	if(boolean_var) std::cout << "boolean_var = true; ";
 
-	if(string_var != "") {
-		std::cout << "string_var = \"" << string_var << "\"; ";
-	}
-
-	if(string_arr.size()) {
-		std::cout << "string_arr = {";
-		for(const auto &i: string_arr) {
-			std::cout << "\"" << i << "\", ";
-		}
-		std::cout << "...}; ";
-	}
-
-	if(int_var) std::cout << "int_var = " << int_var << "; ";
-
-	if(int_arr.size()) {
-		std::cout << "int_arr = {";
-		for(const auto &i: int_arr) std::cout << i << ", ";
-		std::cout << "...}; ";
-	}
+	print_string(string_var, string_arr, "string");
 
 	std::cout << std::setprecision(3);
-
-	if(double_var) std::cout << "double_var = " << double_var << "; ";
-
-	if(double_arr.size()) {
-		std::cout << "double_arr = {";
-		for(const auto &i: double_arr) std::cout << i << ", ";
-		std::cout << "...}; ";
-	}
-
-	if(size_var) std::cout << "size_var = " << size_var << "; ";
-
-	if(size_arr.size()) {
-		std::cout << "size_arr = {";
-		for(const auto &i: size_arr) std::cout << i << ", ";
-		std::cout << "...}; ";
-	}
-
-	if(int32_var) std::cout << "int32_var = " << int32_var << "; ";
-
-	if(int32_arr.size()) {
-		std::cout << "int32_arr = {";
-		for(const auto &i: int32_arr) std::cout << i << ", ";
-		std::cout << "...}; ";
-	}
+	print_numeric(int_var, int_arr, "int");
+	print_numeric(double_var, double_arr, "double");
+	print_numeric(size_var, size_arr, "size");
+	print_numeric(int32_var, int32_arr, "int32");
 
 	std::cout << std::oct;
-
-	if(oct_var) std::cout << "oct_var = " << int{oct_var} << "; ";
-
-	if(oct_arr.size()) {
-		std::cout << "oct_arr = {";
-		for(const auto &i: oct_arr) std::cout << int{i} << ", ";
-		std::cout << "...}; ";
-	}
+	print_numeric(oct_var, oct_arr, "oct");
 
 	std::cout << std::hex;
+	print_numeric(hex_var, hex_arr, "hex");
 
-	if(hex_var) std::cout << "hex_var = " << int{hex_var} << "; ";
-
-	if(hex_arr.size()) {
-		std::cout << "hex_arr = {";
-		for(const auto &i: hex_arr) std::cout << int{i} << ", ";
-		std::cout << "...}; ";
-	}
-
-	if(filename_var.str[0]) {
-		std::cout << "filename_var = \"" << filename_var.str << "\"; ";
-	}
-
-	if(filename_arr.size()) {
-		std::cout << "filename_arr = {";
-		for(const auto &i: filename_arr) {
-			std::cout << "\"" << i.str << "\", ";
-		}
-		std::cout << "...}; ";
-	}
+	print_string(filename_var, filename_arr, "filename");
 
 	std::cout << std::dec;
-
 	if(limited_arr.size()) {
 		std::cout << "limited_arr = {";
 		for(const auto &i: limited_arr) std::cout << i << ", ";
@@ -199,7 +189,7 @@ int main(int argc, char **argv) {
 
 	/* Print out the flagless arguments. */
 	if(flagless_args.size()) {
-		std::cout << "libClame::flagless_args = {";
+		std::cout << "flagless_args = {";
 		for(const auto &i: flagless_args) {
 			std::cout << "\"" << i << "\", ";
 		}

@@ -111,31 +111,13 @@ int LC_read(int argc, char **argv) {
 		current = current -> next;
 	}
 
-	/* As we loop through our arguments, we'll delete them once we're done
-	 * processing them. */
-	node_t *delete = NULL;
+	node_t *delete = NULL; // Used to mark for node deletion.
 
 	/* The root node is our program name so we can skip it.  */
-	for(node_t *i = root.next; i; i = i -> next) {
-		/* Destroy nodes marked for deletion.  Don't pass a null
-		 * pointer to free. */
-		if(delete != NULL) {
-			/* Remove the node and then glue together the two
-			 * halves of the list. */
-			if(delete -> next) {
-				delete -> next -> prev = delete -> prev;
-			}
-
-			delete -> prev -> next = delete -> next;
-			LC_flagless_args_length--;
-
-			free(delete);
-			delete = NULL;
-		}
-
+	for(node_t *i = root.next; i;) { // Iterate in main loop body.
 		/* A `-' by itself is usually used to stand in for stdin or
 		 * stdout. */
-		if(!strcmp(i -> string, "-")) continue;
+		if(!strcmp(i -> string, "-")) goto cont;
 
 		/* If there's a `--' that's just sitting in the list marks the
 		 * end of the flags on the command line. */
@@ -155,21 +137,27 @@ int LC_read(int argc, char **argv) {
 				int ret = evaluate_sflags(i);
 				if(ret != LC_OK) return ret;
 			}
+
 		}
 
-		else continue; // It's a flagless argument; don't delete it.
+		else goto cont; // It's a flagless argument; don't delete it.
 
-		/* Mark the current node for deletion */
+		/* Mark the current node for deletion and step forward. */
 		delete = i;
-	}
+	cont:	i = i -> next;
 
-	/* We need to delete the last node that we marked for deletion. */
-	if(delete != NULL) {
+		/* Destroy nodes marked for deletion. */
+		if(delete == NULL) continue;
+
+		/* Remove the node and then glue together the two halves of the
+		 * list. */
 		if(delete -> next) delete -> next -> prev = delete -> prev;
-		delete -> prev -> next = delete -> next;
 
+		delete -> prev -> next = delete -> next;
 		LC_flagless_args_length--;
+
 		free(delete);
+		delete = NULL;
 	}
 
 	/* At this point all that's left is getting an array for the flagless
@@ -177,21 +165,23 @@ int LC_read(int argc, char **argv) {
 	 * to account for the root node being just the program name. */
 	LC_flagless_args_length--;
 
-	LC_flagless_args = malloc(sizeof(char *)
-		* LC_flagless_args_length);
+	/* Calling malloc() with a potential 0 is not portable. */
+	LC_flagless_args = LC_flagless_args_length?
+		malloc(sizeof(char *) * LC_flagless_args_length) :
+		malloc(sizeof(char *));
+
 	if(!LC_flagless_args) return LC_MALLOC_ERR;
 
 	/* Loop through the linked list to copy the references and deallocate
-	 * the nodes as we go along. Again, we can skip the program name or the
-	 * first node. */
-	delete = current = root.next;
+	 * the nodes as we go along. */
+	current = root.next;
 
 	for(size_t i = 0; i < LC_flagless_args_length; i++) {
 		LC_flagless_args[i] = current -> string;
 
 		/* This process will exit having left current as a NULL
-		 * pointer, which is nice. */
-		delete = current;
+		* pointer, which is nice. */
+		node_t *delete = current;
 		current = current -> next;
 
 		/* Don't delete the root node, as that's static allocation. */
@@ -418,10 +408,11 @@ static int get_strings(LC_flag_t *flag, node_t *node, char *value) {
 	 * just hope the user hasn't made it static allocation. */
 	if(*(char ***) flag -> var_ptr) free(*(char ***) flag -> var_ptr);
 
+	/* Cannot portably call malloc() with a size of zero. */
 	/* Allocate the memory for the array. Also, yes, the type is cursed. */
-	*(char ***) flag -> var_ptr = malloc(
-		*(flag -> arr_length) * sizeof(char *)
-	);
+	*(char ***) flag -> var_ptr = *(flag -> arr_length)?
+		malloc(*(flag -> arr_length) * sizeof(char *)) :
+		malloc(sizeof(char *));
 
 	if(!*(char ***) flag -> var_ptr) return LC_MALLOC_ERR;
 
@@ -577,9 +568,10 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 	if(*(void **) flag -> var_ptr) free(*(void **) flag -> var_ptr);
 
 	/* Allocate the memory for the array. Also, yes, another cured type. */
-	*(void **) flag -> var_ptr = malloc(
-		*(flag -> arr_length) * sizeof(flag -> var_length)
-	);
+	/* Cannot portably call malloc() with a size of zero. */
+	*(void **) flag -> var_ptr = *(flag -> arr_length)?
+		malloc(*(flag -> arr_length) * flag -> var_length) :
+		malloc(sizeof(void *));
 
 	if(!*(void **) flag -> var_ptr) return LC_MALLOC_ERR;
 
@@ -621,8 +613,12 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 }
 
 static char *pop_node(node_t *node) {
+	/* Break out early if someone calls us without any data to pop. */
+	if(!node) return NULL;
+	if(!node -> next) return NULL;
+
 	/* Bridge previous to next. */
-	node_t *next_to_next = node -> next? node -> next -> next: NULL;
+	node_t *next_to_next = node -> next -> next;
 	if(next_to_next) next_to_next -> prev = node;
 
 	/* Get the string out of the node we're going to delete and then delete

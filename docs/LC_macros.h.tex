@@ -18,7 +18,7 @@
 You can use these macros in your program by including the \mintinline{bash}{LC_macros.h} header file.\footnotemark This section is an annotated version of this header file. For all of these macros, \monoc{lflag} needs to be a string constant, \monoc{sflag} needs to be a char constant.
 
 \footnotetext{
-	Needs libClame Version 1.1 or better.
+	The first in each series of macros require libClame Version 1.1 or better, while the remainedr of the macro overloads with flag setting require libClame Version 1.2 or better.
 }
 
 \subsection{Flag to Call a Function}
@@ -27,49 +27,41 @@ This macro lets you make a flag that calls a helper function you have defined in
 \footnotetext{See Section \ref{sec:callback-function}.}
 
 \begin{minted}{c}
-#define LC_MAKE_CALL(lflag, sflag, func) \
-	{lflag, sflag, func, NULL, 0, 0, NULL, NULL, 0, 0, 0, 0}
+#define LC_MAKE_CALL(lflag, sflag, func) ...
 \end{minted}
 
 \subsection{Flag to Set a Boolean to a Given Value}
 This macro lets you make a flag to set a boolean to a given value. \monoc{var} needs to be of declared as type \monoc{bool} and \monoc{val} needs to be a boolean constant.
 
 \begin{minted}{c}
-#define LC_MAKE_BOOL(lflag, sflag, var, val) \
-	{lflag, sflag, NULL, &var, LC_BOOL_VAR, val, NULL, NULL, 0, 0, 0, \
-		false}
+#define LC_MAKE_BOOL(lflag, sflag, var, val) ...
+#define LC_MAKE_BOOL_F(lflag, sflag, var, val, flag) ...
 \end{minted}
 
 \subsection{Flags to Get Config String(s)}
-This macro lets you make a flag to set strings. \monoc{var} needs to be declared as type \monoc{char *}, \monoc{arr} needs to be declared as type \monoc{char **}, len needs to be declared as type \monoc{size_t} and \monoc{min_len} and \monoc{max_len} need to be unsigned integer constants.
+This macro lets you make a flag to set strings. \monoc{var} needs to be declared as type \monoc{char *}, \monoc{arr} needs to be declared as type \monoc{char **}, len needs to be declared as type \monoc{size_t} and \monoc{min(_len)} and \monoc{max(_len)} need to be unsigned integer constants.
 
 \begin{minted}{c}
-#define LC_MAKE_STRING(lflag, sflag, var) \
-	{lflag, sflag, NULL, &var, LC_STRING_VAR, 0, NULL, NULL, 0, 0, 0, \
-		false}
+#define LC_MAKE_STRING(lflag, sflag, var) ...
+#define LC_MAKE_STRING_F(lflag, sflag, var, func) ...
 
-#define LC_MAKE_STRING_ARR(lflag, sflag, arr, len) \
-	{lflag, sflag, NULL, &arr, LC_STRING_VAR, 0, NULL, &len, 0, 0, \
-		SIZE_MAX, false}
+#define LC_MAKE_STRING_ARR(lflag, sflag, arr, len) ...
+#define LC_MAKE_STRING_ARR_F(lflag, sflag, arr, len) ...
 
-#define LC_MAKE_STRING_ARR_BOUNDED(lflag, sflag, arr, len, min_len, max_len) \
-	{lflag, sflag, NULL, &arr, LC_STRING_VAR, 0, NULL, &len, 0, min_len, \
-		max_len, false}
+#define LC_MAKE_STRING_ARR_BOUNDED(lflag, sflag, arr, len, min_len, max_len) ...
+#define LC_MAKE_STRING_ARR_BOUNDED_F(lflag, sflag, arr, len, min, max, func) ...
 \end{minted}
 
 \subsection{Flags to Get a Variable or an Array of Other Types}
-This macro lets you make a flag to set any variable or array. For this paragraph, let us denote the type of the data you are treating as \monoc{T}. \monoc{var} needs to be declared as type \monoc{T}, \monoc{arr} needs to be declared as type \monoc{T *}, \monoc{fmt} needs to be a string constant, len needs to be declared as type \monoc{size_t} and \monoc{min_len} and \monoc{max_len} need to be unsigned integer constants.
+This macro lets you make a flag to set any variable or array. For this paragraph, let us denote the type of the data you are treating as \monoc{T}. \monoc{var} needs to be declared as type \monoc{T}, \monoc{arr} needs to be declared as type \monoc{T *}, \monoc{fmt} needs to be a string constant, len needs to be declared as type \monoc{size_t} and \monoc{min(_len)} and \monoc{max(_len)} need to be unsigned integer constants.
 
 \begin{minted}{c}
-#define LC_MAKE_VAR(lflag, sflag, var, fmt) \
-	{lflag, sflag, NULL, &var, LC_OTHER_VAR, 0, fmt, NULL, sizeof(var), \
-		0, SIZE_MAX, false}
+#define LC_MAKE_VAR(lflag, sflag, var, fmt) ...
+#define LC_MAKE_VAR_F(lflag, sflag, var, fmt, func) ...
 
-#define LC_MAKE_ARR(lflag, sflag, arr, fmt, len) \
-	{lflag, sflag, NULL, &arr, LC_OTHER_VAR, 0, fmt, &len, sizeof(*arr), \
-		0, SIZE_MAX, false}
+#define LC_MAKE_ARR(lflag, sflag, arr, fmt, len) ...
+#define LC_MAKE_ARR_F(lflag, sflag, arr, fmt, len, func) ...
 
-#define LC_MAKE_ARR_BOUNDED(lflag, sflag, arr, fmt, len, min_len, max_len) \
-	{lflag, sflag, NULL, &arr, LC_OTHER_VAR, 0, fmt, &len, sizeof(*arr), \
-		min_len, max_len, false}
+#define LC_MAKE_ARR_BOUNDED(lflag, sflag, arr, fmt, len, min_len, max_len) ...
+#define LC_MAKE_ARR_BOUNDED(lflag, sflag, arr, fmt, len, min, max, func) ...
 \end{minted}

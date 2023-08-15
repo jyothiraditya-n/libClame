@@ -49,6 +49,11 @@ int *limited_arr; size_t limited_arr_len; // Arr of only two values.
 LC_flag_t args[] = {
 	LC_MAKE_CALL("callback", 'c', custom_callback),
 	LC_MAKE_BOOL("boolean_var", 'b', boolean_var, true),
+
+	LC_MAKE_BOOL_F(
+		"boolean_callback", '!', boolean_var, true, custom_callback
+	),
+
 	LC_MAKE_STRING("string_var", 's', string_var),
 	LC_MAKE_STRING_ARR("string_arr", 'S', string_arr, string_arr_len),
 
@@ -74,7 +79,10 @@ LC_flag_t args[] = {
 	LC_MAKE_ARR("filename_arr", 'F', fname_arr, "%8s", fname_arr_len),
 
 	LC_MAKE_ARR_BOUNDED("limited_arr", '2', limited_arr, "%d",
-		limited_arr_len, 2, 2)
+		limited_arr_len, 2, 2),
+
+	LC_MAKE_ARR_BOUNDED_F("limited_callback", '@', limited_arr, "%d",
+		limited_arr_len, 2, 2, custom_callback)
 };
 
 int main(int argc, char **argv) {
@@ -90,7 +98,7 @@ int main(int argc, char **argv) {
 	case LC_MALLOC_ERR:
 		printf("%s: error allocating memory.", LC_prog_name);
 		perror(LC_prog_name); // More precise report from cstdlib.
-		break;
+		return ret;
 
 	default:
 		return ret;
@@ -191,7 +199,7 @@ int main(int argc, char **argv) {
 
 
 	if(LC_flagless_args_length) {
-		printf("LC_flagless_args = {");
+		printf("flagless_args = {");
 		for(size_t i = 0; i < LC_flagless_args_length; i++) {
 			printf("\"%s\", ", LC_flagless_args[i]);
 		}

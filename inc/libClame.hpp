@@ -89,11 +89,14 @@ namespace libClame {
 	/* Program name set via argv[0]. */
 	extern std::string prog_name;
 
-	/* Tables for C/C++ interop. */
+	/* Tables for C/C++ interop and C++ lambda cache tables. */
+	extern std::list<std::string> __string_list;
 	extern std::unordered_map<std::string, callback_t> __call_table;
-	extern std::list<std::string> __string_table;
-	extern std::list<char*> __c_string_table;
-	extern std::list<std::tuple<char**,size_t>> __c_strarr_table;
+	extern std::unordered_map<std::string, callback_t> __shadow_table;
+	extern std::unordered_map<std::string, char*> __c_string_table;
+
+	extern std::unordered_map<std::string, std::tuple<char**, size_t>>
+		__c_strarr_table;
 
 	/* Function call interceptor. */
 	extern int __interceptor(LC_flag_t* __c_flag);

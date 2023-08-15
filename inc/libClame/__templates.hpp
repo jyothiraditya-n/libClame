@@ -15,6 +15,9 @@
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
 /* Included by <libClame/templates.hpp> in the libClame namespace. */
+#ifndef LC_TEMPLATES_HPP
+#include <libClame/templates.hpp>
+#else
 
 /* Helper for getting scanf codes. */
 template<typename T>
@@ -38,29 +41,42 @@ std::string __get_fmt() {
 
 /* Tables for C/C++ interop. */
 template<typename T>
-std::list<std::tuple<T*,size_t>> __c_arr_table;
+std::unordered_map<std::string, std::tuple<T*, size_t>> __c_arr_table;
 
 /* Don't write the same code twice. */
 template<template<typename> typename T1, typename T2>
 static LC_flag_t __make_arr(
-	std::string lflag, char sflag, T1<T2>& arr,
-	std::optional<libClame::limits_t> limits,
-	std::optional<libClame::callback_t> function,
-	std::optional<std::string> sscanf_fmt
+	std::string& lflag, char sflag, T1<T2>* arr_ptr,
+	std::optional<libClame::limits_t>& limits,
+	std::optional<libClame::callback_t>& function,
+	std::optional<std::string>& sscanf_fmt
 ){
-	/* Pointer to malloc()'d C arr we'll manage. */
-	libClame::__c_arr_table<T2>.push_back({NULL, 0});
-	auto& c_arr_entry = *libClame::__c_arr_table<T2>.rbegin();
+	/* Make a copy of the flag that won't get mutated. */
+	libClame::__string_list.push_back(std::move(lflag));
+	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
 
+	/* Pointer to malloc()'d C arr we'll manage. */
+	auto& c_arr_entry = libClame::__c_arr_table<T2>[c_lflag] = {NULL, 0};
 	auto& c_arr = std::get<0>(c_arr_entry);
 	auto& c_arr_len = std::get<1>(c_arr_entry);
 
-	/* Make a copy of the flag that won't get mutated. */
-	libClame::__string_table.push_back(std::move(lflag));
-	const auto c_lflag = (*libClame::__string_table.rbegin()).c_str();
+	/* Add the function to our shadow table. Empty lambda if nothing was
+	 * provided in the optional. */
+	libClame::__shadow_table[c_lflag] = function.value_or([](){});;
 
-	/* Add the wrapper function to our call table. */
-	libClame::__call_table[c_lflag] = [&]() {
+	/* Add our lambda function  */
+	libClame::__call_table[c_lflag] = [c_lflag, arr_ptr](){
+		/* Dereference the pointer to get a C++ reference. */
+		auto& arr = *arr_ptr;
+
+		/* Pointer to malloc()'d C arr we'll manage. */
+		auto& c_arr_entry = libClame::__c_arr_table<T2>[c_lflag];
+		auto& c_arr = std::get<0>(c_arr_entry);
+		auto& c_arr_len = std::get<1>(c_arr_entry);
+
+		/* Get the reference to the function we were provided. */
+		const auto& function = libClame::__shadow_table[c_lflag];
+
 		/* Clear the C++ array. */
 		arr.clear();
 
@@ -74,16 +90,15 @@ static LC_flag_t __make_arr(
 		c_arr = NULL;
 
 		/* Run the callback code if it was specified. */
-		//function.value_or([](){})();
-		(void) function; // BUG, needs checking.
+		function();
 	};
 
 	/* Get the format string and store it away. */
-	libClame::__string_table.push_back(
+	libClame::__string_list.push_back(
 		sscanf_fmt.value_or(libClame::__get_fmt<T2>())
 	);
 
-	const auto fmt = (*libClame::__string_table.rbegin()).c_str();
+	const auto fmt = (*libClame::__string_list.rbegin()).c_str();
 
 	/* Get the limits for the array if they are defined. */
 	const auto set_limits = limits.value_or(
@@ -93,12 +108,12 @@ static LC_flag_t __make_arr(
 	const auto& min = std::get<0>(set_limits);
 	const auto& max = std::get<1>(set_limits);
 
-	/* The variables are: long_flag, short_flag, function, var_ptr,
-	 * var_type, value, fmt_string, arr_length, var_length, min_arr_length,
-	 * max_arr_length, readonly. */
-
-	return LC_flag_t{
-		c_lflag, sflag, libClame::__interceptor, &c_arr, LC_OTHER_VAR,
-		0, fmt, &c_arr_len, sizeof(T2), min, max, false
-	};
+	/* Make the structure. */
+	return LC_MAKE_ARR_BOUNDED_F(
+		c_lflag, sflag, c_arr, fmt, c_arr_len, min, max,
+		libClame::__interceptor
+	);
 }
+
+/* End Header Guard. */
+#endif

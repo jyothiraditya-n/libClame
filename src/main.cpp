@@ -25,8 +25,8 @@ LC_flag_t libClame::make_call(
 	std::string lflag, char sflag, libClame::callback_t function
 ){
 	/* Make a copy of the flag that won't get mutated. */
-	libClame::__string_table.push_back(std::move(lflag));
-	const auto c_lflag = (*libClame::__string_table.rbegin()).c_str();
+	libClame::__string_list.push_back(std::move(lflag));
+	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
 
 	/* Add the function to our call table. */
 	libClame::__call_table[c_lflag] = function;
@@ -43,76 +43,99 @@ LC_flag_t libClame::make_bool(
 	std::optional<libClame::callback_t> function
 ){
 	/* Make a copy of the flag that won't get mutated. */
-	libClame::__string_table.push_back(std::move(lflag));
-	const auto c_lflag = (*libClame::__string_table.rbegin()).c_str();
+	libClame::__string_list.push_back(std::move(lflag));
+	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
 
 	/* Add the function to our call table. Empty lambda if nothing was
 	 * provided in the optional. */
 	libClame::__call_table[c_lflag] = function.value_or([](){});;
 
-	/* The variables are: long_flag, short_flag, function, var_ptr,
-	 * var_type, value, fmt_string, arr_length, var_length, min_arr_length,
-	 * max_arr_length, readonly. */
-
-	return LC_flag_t{
-		c_lflag, sflag, libClame::__interceptor, &var, LC_BOOL_VAR,
-		val, NULL, NULL, 0, 0, 0, false
-	};
+	/* Make the structure. */
+	return LC_MAKE_BOOL_F(
+		c_lflag, sflag, var, val, libClame::__interceptor
+	);
 }
 
 /* Flags to get config strings */
-LC_flag_t libClame::make_string(
-	std::string lflag, char sflag, std::string& string,
-	std::optional<callback_t> function
+LC_flag_t __make_string(
+	std::string& lflag, char sflag, std::string* string_ptr,
+	std::optional<libClame::callback_t>& function
 ){
-	/* Pointer to a C string copied from argv[] that we'll manage. */
-	libClame::__c_string_table.push_back(NULL);
-	auto& c_string = *__c_string_table.rbegin();
-
 	/* Make a copy of the flag that won't get mutated. */
-	libClame::__string_table.push_back(std::move(lflag));
-	const auto c_lflag = (*libClame::__string_table.rbegin()).c_str();
+	libClame::__string_list.push_back(std::move(lflag));
+	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
 
-	/* Add the wrapper function to our call table. */
-	libClame::__call_table[c_lflag] = [&]() {
+	/* Pointer to the string copied from argv[] that we'll share with C. */
+	auto& c_string = libClame::__c_string_table[c_lflag] = NULL;
+
+	/* Add the function to our shadow table. Empty lambda if nothing was
+	 * provided in the optional. */
+	libClame::__shadow_table[c_lflag] = function.value_or([](){});;
+
+	/* Add the assignment wrapper function to our call table. */
+	libClame::__call_table[c_lflag] = [c_lflag, string_ptr]() {
+		/* Dereference the pointer to get a C++ reference. */
+		auto& string = *string_ptr;
+
+		/* Get the reference to the string we were sharing with C */
+		const auto& c_string = libClame::__c_string_table[c_lflag];
+
+		/* Get the reference to the function we were provided. */
+		const auto& function = libClame::__shadow_table[c_lflag];
+
 		/* Move the value to a C++ string. */
 		string = c_string;
 
-		/* Run the callback code or an empty lambda. */
-		function.value_or([](){})();
+		/* Run the callback code. */
+		function();
 	};
 
-	/* The variables are: long_flag, short_flag, function, var_ptr,
-	 * var_type, value, fmt_string, arr_length, var_length, min_arr_length,
-	 * max_arr_length, readonly. */
+	/* Make the structure. */
+	return LC_MAKE_STRING_F(
+		c_lflag, sflag, c_string, libClame::__interceptor
+	);
+}
 
-	return LC_flag_t{
-		c_lflag, sflag, libClame::__interceptor, &c_string,
-		LC_STRING_VAR, 0, NULL, NULL, 0, 0, 0, false
-	};
+LC_flag_t libClame::make_string(
+	std::string lflag, char sflag, std::string& string,
+	std::optional<libClame::callback_t> function
+){
+	return __make_string(lflag, sflag, &string, function);
 }
 
 /* Don't write the same code twice. */
 template<template<typename> typename T, typename S>
 static LC_flag_t __make_str_arr(
-	std::string lflag, char sflag, T<S>& strings,
-	std::optional<libClame::limits_t> limits,
-	std::optional<libClame::callback_t> function
+	std::string& lflag, char sflag, T<S>* strings_ptr,
+	std::optional<libClame::limits_t>& limits,
+	std::optional<libClame::callback_t>& function
 ){
+	/* Make a copy of the flag that won't get mutated. */
+	libClame::__string_list.push_back(std::move(lflag));
+	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
+
 	/* Pointer to C string arr copied from argv[] that we'll manage. */
-	libClame::__c_strarr_table.push_back({NULL, 0});
-	auto& c_strarr_entry = *libClame::__c_strarr_table.rbegin();
-
-
+	auto& c_strarr_entry = libClame::__c_strarr_table[c_lflag] = {NULL, 0};
 	auto& c_strarr = std::get<char**>(c_strarr_entry);
 	auto& c_strarr_len = std::get<size_t>(c_strarr_entry);
 
-	/* Make a copy of the flag that won't get mutated. */
-	libClame::__string_table.push_back(std::move(lflag));
-	const auto c_lflag = (*libClame::__string_table.rbegin()).c_str();
+	/* Add the function to our shadow table. Empty lambda if nothing was
+	 * provided in the optional. */
+	libClame::__shadow_table[c_lflag] = function.value_or([](){});;
 
 	/* Add the wrapper function to our call table. */
-	libClame::__call_table[c_lflag] = [&]() {
+	libClame::__call_table[c_lflag] = [c_lflag, strings_ptr](){
+		/* Dereference the pointer to get a C++ reference. */
+		auto& strings = *strings_ptr;
+
+		/* Get the reference to the array we were sharing with C */
+		auto& c_strarr_entry = libClame::__c_strarr_table[c_lflag];
+		auto& c_strarr = std::get<char**>(c_strarr_entry);
+		auto& c_strarr_len = std::get<size_t>(c_strarr_entry);
+
+		/* Get the reference to the function we were provided. */
+		const auto& function = libClame::__shadow_table[c_lflag];
+
 		/* Clear the strings. */
 		strings.clear();
 
@@ -125,9 +148,8 @@ static LC_flag_t __make_str_arr(
 		std::free(c_strarr);
 		c_strarr = NULL;
 
-		/* Run the callback code or an empty lambda. */
-		// function.value_or([](){})();
-		(void) function; // BUG, needs checking.
+		/* Run the callback code. */
+		function();
 	};
 
 	/* Get the limits for the array if they are defined. */
@@ -138,14 +160,11 @@ static LC_flag_t __make_str_arr(
 	const auto& min = std::get<0>(set_limits);
 	const auto& max = std::get<1>(set_limits);
 
-	/* The variables are: long_flag, short_flag, function, var_ptr,
-	 * var_type, value, fmt_string, arr_length, var_length, min_arr_length,
-	 * max_arr_length, readonly. */
-
-	return LC_flag_t{
-		c_lflag, sflag, libClame::__interceptor, &c_strarr,
-		LC_STRING_VAR, 0, NULL, &c_strarr_len, 0, min, max, false
-	};
+	/* Make the structure. */
+	return LC_MAKE_STRING_ARR_BOUNDED_F(
+		c_lflag, sflag, c_strarr, c_strarr_len, min, max,
+		libClame::__interceptor
+	);
 }
 
 LC_flag_t libClame::make_str_arr(
@@ -154,7 +173,7 @@ LC_flag_t libClame::make_str_arr(
 	std::optional<libClame::callback_t> function
 ){
 	return __make_str_arr(
-		lflag, sflag, strings, limits, function
+		lflag, sflag, &strings, limits, function
 	);
 }
 
@@ -165,7 +184,7 @@ LC_flag_t libClame::make_str_arr(
 	std::optional<libClame::callback_t> function
 ){
 	return __make_str_arr(
-		lflag, sflag, strings, limits, function
+		lflag, sflag, &strings, limits, function
 	);
 }
 
@@ -207,10 +226,14 @@ const char *libClame::exception::what() const noexcept {
 }
 
 /* Tables for C/C++ interop. */
+std::list<std::string> libClame::__string_list;
 std::unordered_map<std::string, libClame::callback_t> libClame::__call_table;
-std::list<std::string> libClame::__string_table;
-std::list<char*> libClame::__c_string_table;
-std::list<std::tuple<char**,size_t>> libClame::__c_strarr_table;
+std::unordered_map<std::string, libClame::callback_t> libClame::__shadow_table;
+
+std::unordered_map<std::string, char*> libClame::__c_string_table;
+
+std::unordered_map<std::string, std::tuple<char**, size_t>>
+	libClame::__c_strarr_table;
 
 /* Function call __interceptor. */
 int libClame::__interceptor(LC_flag_t* c_flag) {
