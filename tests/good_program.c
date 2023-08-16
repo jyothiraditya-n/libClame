@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 
 	print_numeric("int", "%d", int_var, int_arr, int_arr_len);
 
-	print_numeric("double", "%2.lf", double_var, double_arr,
+	print_numeric("double", "%.2lf", double_var, double_arr,
 		double_arr_len);
 
 
