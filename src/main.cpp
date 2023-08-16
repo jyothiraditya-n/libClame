@@ -38,17 +38,16 @@ LC_flag_t libClame::make_call(
 }
 
 /* Flag to set a boolean to a given value. */
-LC_flag_t libClame::make_bool(
-	std::string lflag, char sflag, bool& var, bool val,
-	std::optional<libClame::callback_t> function
+static LC_flag_t __make_bool(
+	std::string& lflag, char sflag, bool& var, bool val,
+	libClame::callback_t function
 ){
 	/* Make a copy of the flag that won't get mutated. */
 	libClame::__string_list.push_back(std::move(lflag));
 	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
 
-	/* Add the function to our call table. Empty lambda if nothing was
-	 * provided in the optional. */
-	libClame::__call_table[c_lflag] = function.value_or([](){});;
+	/* Add the function to our call table. */
+	libClame::__call_table[c_lflag] = function;
 
 	/* Make the structure. */
 	return LC_MAKE_BOOL_F(
@@ -56,10 +55,24 @@ LC_flag_t libClame::make_bool(
 	);
 }
 
+LC_flag_t libClame::make_bool(
+	std::string lflag, char sflag, bool& var, bool val
+){
+	/* Pass in a dummy lambda that does nothing. */
+	return __make_bool(lflag, sflag, var, val, [](){});
+}
+
+LC_flag_t libClame::make_bool(
+	std::string lflag, char sflag, bool& var, bool val,
+	libClame::callback_t function
+){
+	return __make_bool(lflag, sflag, var, val, function);
+}
+
 /* Flags to get config strings */
 LC_flag_t __make_string(
 	std::string& lflag, char sflag, std::string* string_ptr,
-	std::optional<libClame::callback_t>& function
+	libClame::callback_t function
 ){
 	/* Make a copy of the flag that won't get mutated. */
 	libClame::__string_list.push_back(std::move(lflag));
@@ -68,9 +81,8 @@ LC_flag_t __make_string(
 	/* Pointer to the string copied from argv[] that we'll share with C. */
 	auto& c_string = libClame::__c_string_table[c_lflag] = NULL;
 
-	/* Add the function to our shadow table. Empty lambda if nothing was
-	 * provided in the optional. */
-	libClame::__shadow_table[c_lflag] = function.value_or([](){});;
+	/* Add the function to our shadow table. */
+	libClame::__shadow_table[c_lflag] = function;
 
 	/* Add the assignment wrapper function to our call table. */
 	libClame::__call_table[c_lflag] = [c_lflag, string_ptr]() {
@@ -98,17 +110,24 @@ LC_flag_t __make_string(
 
 LC_flag_t libClame::make_string(
 	std::string lflag, char sflag, std::string& string,
-	std::optional<libClame::callback_t> function
+	libClame::callback_t function
 ){
 	return __make_string(lflag, sflag, &string, function);
 }
 
-/* Don't write the same code twice. */
-template<template<typename> typename T, typename S>
+LC_flag_t libClame::make_string(
+	std::string lflag, char sflag, std::string& string
+){
+	/* Pass in a dummy lambda that does nothing. */
+	return __make_string(lflag, sflag, &string, [](){});
+}
+
+template<template<typename> typename C>
+requires libClame::ok_container<C, std::string>
 static LC_flag_t __make_str_arr(
-	std::string& lflag, char sflag, T<S>* strings_ptr,
-	std::optional<libClame::limits_t>& limits,
-	std::optional<libClame::callback_t>& function
+	std::string& lflag, char sflag, C<std::string>* strings_ptr,
+	libClame::limits_t limits,
+	libClame::callback_t function
 ){
 	/* Make a copy of the flag that won't get mutated. */
 	libClame::__string_list.push_back(std::move(lflag));
@@ -121,7 +140,7 @@ static LC_flag_t __make_str_arr(
 
 	/* Add the function to our shadow table. Empty lambda if nothing was
 	 * provided in the optional. */
-	libClame::__shadow_table[c_lflag] = function.value_or([](){});;
+	libClame::__shadow_table[c_lflag] = function;
 
 	/* Add the wrapper function to our call table. */
 	libClame::__call_table[c_lflag] = [c_lflag, strings_ptr](){
@@ -153,9 +172,7 @@ static LC_flag_t __make_str_arr(
 	};
 
 	/* Get the limits for the array if they are defined. */
-	const auto set_limits = limits.value_or(
-		std::tuple<size_t,size_t>{0, SIZE_MAX}
-	);
+	const auto set_limits = limits;
 
 	const auto& min = std::get<0>(set_limits);
 	const auto& max = std::get<1>(set_limits);
@@ -167,26 +184,62 @@ static LC_flag_t __make_str_arr(
 	);
 }
 
+template<template<typename> typename C>
+requires libClame::ok_container<C, std::string>
 LC_flag_t libClame::make_str_arr(
-	std::string lflag, char sflag, std::list<std::string>& strings,
-	std::optional<libClame::limits_t> limits,
-	std::optional<libClame::callback_t> function
+	std::string lflag, char sflag, C<std::string>& strings
 ){
-	return __make_str_arr(
-		lflag, sflag, &strings, limits, function
-	);
+	return __make_str_arr(lflag, sflag, &strings, {0, SIZE_MAX}, [](){});
 }
 
+template<template<typename> typename C>
+requires libClame::ok_container<C, std::string>
 LC_flag_t libClame::make_str_arr(
-	std::string lflag, char sflag,
-	std::vector<std::string> &strings,
-	std::optional<libClame::limits_t> limits,
-	std::optional<libClame::callback_t> function
+	std::string lflag, char sflag, C<std::string>& strings,
+	libClame::callback_t function
 ){
-	return __make_str_arr(
-		lflag, sflag, &strings, limits, function
-	);
+	return __make_str_arr(lflag, sflag, &strings, {0, SIZE_MAX}, function);
 }
+
+template<template<typename> typename C>
+requires libClame::ok_container<C, std::string>
+LC_flag_t libClame::make_str_arr(
+	std::string lflag, char sflag, C<std::string>& strings,
+	libClame::limits_t limits
+){
+	return __make_str_arr(lflag, sflag, &strings, limits, [](){});
+}
+
+template<template<typename> typename C>
+requires libClame::ok_container<C, std::string>
+LC_flag_t libClame::make_str_arr(
+	std::string lflag, char sflag, C<std::string>& strings,
+	libClame::limits_t limits, libClame::callback_t function
+){
+	return __make_str_arr(lflag, sflag, &strings, limits, function);
+}
+
+/* Force templates to instantialise */
+#define instantialise(c) \
+template LC_flag_t libClame::make_str_arr<c>( \
+	std::string, char, c<std::string>& \
+); \
+\
+template LC_flag_t libClame::make_str_arr<c>( \
+	std::string, char, c<std::string>&, libClame::callback_t \
+); \
+\
+template LC_flag_t libClame::make_str_arr<c>( \
+	std::string, char, c<std::string>&, libClame::limits_t \
+); \
+\
+template LC_flag_t libClame::make_str_arr<c>( \
+	std::string, char, c<std::string>&, libClame::limits_t, \
+	libClame::callback_t \
+); \
+
+instantialise(std::list)
+instantialise(std::vector)
 
 /* Command to begin command-line argument processing. */
 void libClame::read(int argc, char** argv, std::vector<LC_flag_t>& flags) {

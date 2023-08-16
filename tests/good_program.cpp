@@ -21,7 +21,7 @@
 #define LC_REQ_SUBVER 2
 
 #include <libClame.hpp>
-#include <libClame/templates.hpp>
+#include <libClame/generics.hpp>
 
 using namespace libClame;
 
@@ -97,48 +97,43 @@ void print_numeric(
 int main(int argc, char **argv) {
 	/* Set up our flags. */
 	flags.push_back(make_call("callback", 'c', custom_callback));
-	flags.push_back(make_bool("boolean_var", 'b', boolean_var, true, {}));
+	flags.push_back(make_bool("boolean_var", 'b', boolean_var, true));
 
 	flags.push_back(make_bool(
 		"boolean_callback", '!', boolean_var, true, custom_callback)
 	);
 
-	flags.push_back(make_string("string_var", 's', string_var, {}));
-	flags.push_back(make_str_arr("string_arr", 'S', string_arr, {}, {}));
+	flags.push_back(make_string("string_var", 's', string_var));
+	flags.push_back(make_str_arr("string_arr", 'S', string_arr));
 
-	flags.push_back(make_var("int_var", 'i', int_var, {}, {}));
-	flags.push_back(make_arr("int_arr", 'I', int_arr, {}, {}, {}));
+	flags.push_back(make_var("int_var", 'i', int_var));
+	flags.push_back(make_arr("int_arr", 'I', int_arr));
 
-	flags.push_back(make_var("double_var", 'd', double_var, {}, {}));
-	flags.push_back(make_arr("double_arr", 'D', double_arr, {}, {}, {}));
+	flags.push_back(make_var("double_var", 'd', double_var));
+	flags.push_back(make_arr("double_arr", 'D', double_arr));
 
-	flags.push_back(make_var("size_var", 'z', size_var, {}, {}));
-	flags.push_back(make_arr("size_arr", 'Z', size_arr, {}, {}, {}));
+	flags.push_back(make_var("size_var", 'z', size_var));
+	flags.push_back(make_arr("size_arr", 'Z', size_arr));
 
-	flags.push_back(make_var("int32_var", 'l', int32_var, {}, {}));
-	flags.push_back(make_arr("int32_arr", 'L', int32_arr, {}, {}, {}));
+	flags.push_back(make_var("int32_var", 'l', int32_var));
+	flags.push_back(make_arr("int32_arr", 'L', int32_arr));
 
-	flags.push_back(make_var("oct_var", 'o', oct_var, {}, "%" SCNo8));
-	flags.push_back(make_arr("oct_arr", 'O', oct_arr, {}, {}, "%" SCNo8));
+	flags.push_back(make_var("oct_var", 'o', oct_var, "%" SCNo8));
+	flags.push_back(make_arr("oct_arr", 'O', oct_arr, "%" SCNo8));
 
-	flags.push_back(make_var("hex_var", 'x', hex_var, {}, "%" SCNx8));
-	flags.push_back(make_arr("hex_arr", 'X', hex_arr, {}, {}, "%" SCNx8));
+	flags.push_back(make_var("hex_var", 'x', hex_var, "%" SCNx8));
+	flags.push_back(make_arr("hex_arr", 'X', hex_arr, "%" SCNx8));
 
-	flags.push_back(
-		make_var("filename_var", 'f', filename_var, {}, "%8s")
-	);
-
-	flags.push_back(
-		make_arr("filename_arr", 'F', filename_arr, {}, {}, "%8s")
-	);
+	flags.push_back(make_var("filename_var", 'f', filename_var, "%8s"));
+	flags.push_back(make_arr("filename_arr", 'F', filename_arr, "%8s"));
 
 	flags.push_back(make_arr(
-		"limited_arr", '2', limited_arr, limits_t{2, 2}, {}, {}
+		"limited_arr", '2', limited_arr, limits_t{2, 2}
 	));
 
 	flags.push_back(make_arr(
 		"limited_callback", '@', limited_arr, limits_t{2, 2},
-		custom_callback, {}
+		custom_callback
 	));
 
 	try {

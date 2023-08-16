@@ -63,7 +63,7 @@
 	{lflag, sflag, func, &arr, LC_STRING_VAR, 0, NULL, &len, 0, min, \
 		max, false}
 
-/* Flags to get a variable or an array of other types. */
+/* Flags to get variables or arrays of other types. */
 #define LC_MAKE_VAR(lflag, sflag, var, fmt) \
 	{lflag, sflag, NULL, &var, LC_OTHER_VAR, 0, fmt, NULL, sizeof(var), \
 		0, SIZE_MAX, false}

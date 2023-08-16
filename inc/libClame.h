@@ -22,14 +22,13 @@
 #define LC_VERSION 1 /* Incremented when backwards compatibility broken. */
 #define LC_SUBVERSION 2 /* Incremented when new features added. */
 
-/* Bad version number. */
+/* Check for a bad version number. */
 #ifdef LC_REQ_VER
 #if LC_REQ_VER != LC_VERSION
 #error "Incorrect libClame version."
 #endif
 #endif
 
-/* Bad subversion number. */
 #ifdef LC_REQ_SUBVER
 #if LC_REQ_SUBVER > LC_SUBVERSION
 #error "Incorrect libClame subversion."
@@ -55,7 +54,7 @@ typedef struct LC_flag_s {
 
 	/* Expected return types for the callback function. */
 	#define LC_FUNCTION_OK 0
-	#define LC_FUNCTION_ERR (!LC_FUNCTION_OK)
+	#define LC_FUNCTION_ERR (!LC_FUNCTION_OK) // Any non-zero value.
 
 	/* Pointer to variable and it's type. */
 	void *var_ptr;
@@ -66,7 +65,7 @@ typedef struct LC_flag_s {
 	#define LC_BOOL_VAR 2
 	#define LC_OTHER_VAR 3
 
-	/* Value to set boolean variables to. */
+	/* Value to set bools to. */
 	bool value;
 
 	/* Format string for other variables. */
@@ -108,6 +107,10 @@ extern int LC_read(int argc, char **argv);
 #define LC_BAD_VAR_TYPE 10
 #define LC_NULL_FORMAT_STR 11
 
+/* Set when a flag callback function errors out. */
+extern int (*LC_err_function)();
+extern int LC_function_errno;
+
 /* Get an error string. */
 extern const char *LC_strerror(int error);
 
@@ -117,10 +120,6 @@ extern size_t LC_flagless_args_length;
 
 /* Program name set via argv[0]. */
 extern char *LC_prog_name;
-
-/* Set when a flag callback function errors out. */
-extern int (*LC_err_function)();
-extern int LC_function_errno;
 
 /* End Header Guard */
 #endif

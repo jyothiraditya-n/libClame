@@ -22,7 +22,7 @@ cflags_release="-std=c99 -Wall -Wextra -Wpedantic -s -O3 -Iinc/"
 cflags_debug="-std=c99 -Wall -Wextra -Werror -Wpedantic -g -Og -Iinc/"
 
 cpp="c++"
-ccflags_release="-std=c++20 -Wall -Wextra -Wpedantic -s -O2 -Iinc/"
+ccflags_release="-std=c++20 -Wall -Wextra -Wpedantic -s -O3 -Iinc/"
 ccflags_debug="-std=c++20 -Wall -Wextra -Werror -Wpedantic -g -Og -Iinc/"
 
 ld="ld"

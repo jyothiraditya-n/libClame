@@ -30,9 +30,6 @@ size_t LC_flagless_args_length = 0;
 
 char *LC_prog_name = NULL;
 
-int (*LC_err_function)() = NULL;
-int LC_function_errno = 0;
-
 /* We'll hold the arguments in a linked list. */
 typedef struct node_s {
 	struct node_s *next, *prev;
@@ -649,28 +646,4 @@ static void print_flag(LC_flag_t *flag) {
 	else {
 		fprintf(stderr, "'-%c'", flag -> short_flag);
 	}
-}
-
-/* Get error strings. */
-const char *LC_strerror(int error) {
-	/* Return the compile-time constant's name. */
-	switch(error) {
-		case LC_OK: return "LC_OK";
-		case LC_NO_ARGS: return "LC_NO_ARGS";
-		case LC_MALLOC_ERR: return "LC_MALLOC_ERR";
-
-		case LC_BAD_FLAG: return "LC_BAD_FLAG";
-		case LC_VAR_RESET: return "LC_VAR_RESET";
-		case LC_NO_VAL: return "LC_NO_VAL";
-		case LC_BAD_VAL: return "LC_BAD_VAL";
-		case LC_LESS_VALS: return "LC_LESS_VALS";
-		case LC_MORE_VALS: return "LC_MORE_VALS";
-		case LC_FUNC_ERR: return "LC_FUNC_ERR";
-
-		case LC_BAD_VAR_TYPE: return "LC_BAD_VAR_TYPE";
-		case LC_NULL_FORMAT_STR: return "LC_NULL_FORMAT_STR";
-	}
-
-	/* We have an invalid error number. */
-	return "LC_UNKNOWN_ERR";
 }

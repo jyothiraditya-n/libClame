@@ -35,6 +35,7 @@ assert_eq() {
 test() {
 
 #define LC_BAD_FLAG 3 // A malformed flag was supplied to the program.
+
 (set -x; $program -? > "/dev/null" 2>&1)
 assert_eq "$?" "3"
 
@@ -42,6 +43,7 @@ assert_eq "$?" "3"
 assert_eq "$?" "3"
 
 #define LC_VAR_RESET 4 // A variable was set twice on the command line.
+
 (set -x; $program -bb > "/dev/null" 2>&1)
 assert_eq "$?" "4"
 
@@ -60,6 +62,7 @@ assert_eq "$?" "4"
 assert_eq "$?" "4"
 
 #define LC_NO_VAL 5 // No value was supplied to a flag that sets a variable.
+
 (set -x; $program --filename_var > "/dev/null" 2>&1)
 assert_eq "$?" "5"
 
@@ -85,6 +88,7 @@ assert_eq "$?" "0"
 assert_eq "$?" "0"
 
 #define LC_BAD_VAL 6 // A malformed value was supplied.
+
 (set -x; $program -z"Five" > "/dev/null" 2>&1)
 assert_eq "$?" "6"
 
@@ -119,6 +123,7 @@ assert_eq "$?" "6"
 assert_eq "$?" "0"
 
 #define LC_LESS_VALS 7 // Fewer values were supplied than the flag accepts.
+
 (set -x; $program -2"1" > "/dev/null" 2>&1)
 assert_eq "$?" "7"
 
@@ -129,6 +134,7 @@ assert_eq "$?" "7"
 assert_eq "$?" "7"
 
 #define LC_MORE_VALS 8 // More values were supplied than the flag accepts.
+
 (set -x; $program -2"1" "2" "3" > "/dev/null" 2>&1)
 assert_eq "$?" "8"
 

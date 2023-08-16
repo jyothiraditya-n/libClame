@@ -19,14 +19,17 @@
 #define LIBCLAME_HPP 1
 
 /* Standard Library Includes. */
-#include <exception>
-#include <functional>
-#include <list>
-#include <optional>
 #include <string>
+
 #include <tuple>
 #include <unordered_map>
+
+#include <list>
 #include <vector>
+
+#include <functional>
+#include <exception>
+#include <concepts>
 
 /* Main Program Header. */
 extern "C" {
@@ -39,6 +42,17 @@ namespace libClame {
 	/* C++ style callback function definition. */
 	typedef std::function<void()> callback_t;
 
+	/* We can work with std::list, std::forward_list and std::vector for
+	 * arrays of values. */
+	template<template<typename> typename C, typename T>
+	concept ok_container = (
+		std::is_same_v<C<T>, std::list<T>>
+		|| std::is_same_v<C<T>, std::vector<T>>
+	);
+
+	/* Arrays scanned in can have a minimum and maximum size. */
+	typedef std::tuple<size_t, size_t> limits_t;
+
 	/* Flag to call a function */
 	extern LC_flag_t make_call(
 		std::string lflag, char sflag, callback_t function
@@ -46,29 +60,49 @@ namespace libClame {
 
 	/* Flag to set a boolean to a given value. */
 	extern LC_flag_t make_bool(
+		std::string lflag, char sflag, bool& var, bool val
+	);
+
+	extern LC_flag_t make_bool(
 		std::string lflag, char sflag, bool& var, bool val,
-		std::optional<callback_t> function
+		callback_t function
 	);
 
 	/* Flags to get config strings */
 	extern LC_flag_t make_string(
+		std::string lflag, char sflag, std::string& string
+	);
+
+	extern LC_flag_t make_string(
 		std::string lflag, char sflag, std::string& string,
-		std::optional<callback_t> function
+		callback_t function
 	);
 
-	typedef std::tuple<size_t, size_t> limits_t;
-
+	template<template<typename> typename C>
+	requires ok_container<C, std::string>
 	extern LC_flag_t make_str_arr(
-		std::string lflag, char sflag, std::list<std::string>& strings,
-		std::optional<limits_t> limits,
-		std::optional<callback_t> function
+		std::string lflag, char sflag, C<std::string>& strings
 	);
 
+	template<template<typename> typename C>
+	requires ok_container<C, std::string>
 	extern LC_flag_t make_str_arr(
-		std::string lflag, char sflag,
-		std::vector<std::string>& strings,
-		std::optional<limits_t> limits,
-		std::optional<callback_t> function
+		std::string lflag, char sflag, C<std::string>& strings,
+		callback_t function
+	);
+
+	template<template<typename> typename C>
+	requires ok_container<C, std::string>
+	extern LC_flag_t make_str_arr(
+		std::string lflag, char sflag, C<std::string>& strings,
+		limits_t limits
+	);
+
+	template<template<typename> typename C>
+	requires ok_container<C, std::string>
+	extern LC_flag_t make_str_arr(
+		std::string lflag, char sflag, C<std::string>& strings,
+		limits_t limits, callback_t function
 	);
 
 	/* Command to begin command-line argument processing. */

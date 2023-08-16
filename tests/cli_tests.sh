@@ -39,10 +39,12 @@ assert_eq() {
 test() {
 
 # Check callback function.
+
 output=$(set -x; $program -c)
 assert_eq "$output" "custom_callback(); ..."
 
 # Try setting all the variables individually.
+
 output=$(set -x; $program -b)
 assert_eq "$output" "boolean_var = true; ..."
 

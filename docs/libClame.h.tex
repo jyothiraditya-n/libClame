@@ -83,7 +83,7 @@ If the function executed correctly, go ahead and return 0. Any other value will 
 
 \begin{minted}{c}
 	#define LC_FUNCTION_OK 0
-	#define LC_FUNCTION_ERR (!LC_FUNCTION_OK)
+	#define LC_FUNCTION_ERR (!LC_FUNCTION_OK) // Any non-zero value.
 \end{minted}
 
 \subsubsection{Variables}
@@ -229,6 +229,13 @@ You can get the constant name given the numeric value using the \monoc{LC_strerr
 extern const char *LC_strerror(int error);
 \end{minted}
 
+And finally, the following variables are set by the \monoc{LC_read()} function if a user-defined function returned an error code of some sort.
+
+\begin{minted}{c}
+extern int (*LC_err_function)();
+extern int LC_function_errno;
+\end{minted}
+
 \subsubsection{Flagless Arguments}
 
 These variables are set by the \monoc{LC_read()} function when it encounters arguments supplied to the program that were not preceded by a flag.
@@ -244,13 +251,4 @@ We also get the program name out of \monoc{argv[0]}.
 
 \begin{minted}{c}
 extern char *LC_prog_name;
-\end{minted}
-
-\subsubsection{User-Specified Function Error}
-
-And finally, the following variables are set by the \monoc{LC_read()} function if a user-defined function returned an error code of some sort.
-
-\begin{minted}{c}
-extern int (*LC_err_function)();
-extern int LC_function_errno;
 \end{minted}
