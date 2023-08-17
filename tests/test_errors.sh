@@ -157,17 +157,17 @@ assert_eq "$?" "0"
 
 # Call the C and C++ test programs with various incorrect args to make sure the
 # error reporting works correctly.
-if command -v valgrind; then
-	program="valgrind -q build/good_program_test"
+if [ "$1" == "-valgrind" ] && command -v valgrind; then
+	program="valgrind -q build/program_test"
 	test
 
-	program="valgrind -q build/good_program_cpp_test"
+	program="valgrind -q build/program_cpp_test"
 	test
 else
-	program="build/good_program_test"
+	program="build/program_test"
 	test
 
-	program="build/good_program_cpp_test"
+	program="build/program_cpp_test"
 	test
 fi
 

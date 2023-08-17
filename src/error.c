@@ -16,6 +16,7 @@
 
 #include <libClame.h>
 
+/* Instantiate the error-related variables. */
 int (*LC_err_function)() = NULL;
 int LC_function_errno = 0;
 

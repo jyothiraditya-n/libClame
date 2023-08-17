@@ -21,7 +21,7 @@
 
 #include <libClame.h>
 
-/* Create the symbols for the variables that are externed in the header. */
+/* Instantiate most of the variables externed in the header. */
 LC_flag_t *LC_flags = NULL;
 size_t LC_flags_length = 0;
 
@@ -39,14 +39,16 @@ typedef struct node_s {
 
 } node_t;
 
-/* The root node is statically-allocated and we'll have a pointer to the
- * argument currently being processed. */
+/* The root node is statically-allocated. */
 static node_t root = {NULL, NULL, NULL};
-static node_t *current = &root;
 
-/* Helper flags to evaluate long and short flags. */
+/* Helper flags to evaluate long and short flags. These will delete all nodes
+ * for values relating to the flag except the node that they take as input. */
 static int evaluate_lflag(node_t *node);
 static int evaluate_sflags(node_t *node);
+
+/* Set to true if we are processing a long flag, false if it's a short flag. */
+static bool processing_lflag;
 
 /* Helper for evaluating all sflags in a node. It returns either LC_OK or this
  * custom non-error status. */
@@ -57,46 +59,45 @@ static int evaluate_sflag(node_t *node, char sflag, char *value);
 static LC_flag_t *find_flag(const char *lflag, char sflag);
 
 /* These two find value or values for a variable based on the flag that it
- * was specified in and a first value specified on the command line within the
- * node with the flag itself. */
+ * was specified in. If a candidate value for was specified in the same node
+ * as the flag was specified, then a pointer to the start of that value string
+ * is also passed along. */
+
+/* The two functions will pop() off any nodes containing values that they
+ * process, except for the node that they were psased as an input. */
 static int get_strings(LC_flag_t *flag, node_t *node, char *value);
 static int get_others(LC_flag_t *flag, node_t *node, char *value);
 
 /* This function deletes the next node from the list and returns the string
- * stored in it. */
+ * stored in it. It returns NULL if there is no next node. */
 static char *pop_node(node_t *node);
 
-/* This function prints the flag for when an error has occurred. */
+/* This function prints the flag in terms of its long and short values. */
 static void print_flag(LC_flag_t *flag);
 
 /* Our main function. */
 int LC_read(int argc, char **argv) {
+	/* Get our program name out. */
+	LC_prog_name = argv[0];
+
+	/* Bail if the LC_flags array is not properly set up. */
+	if(!LC_flags) return LC_NO_ARGS;
+
 	/* If there's any previously allocated array of flagless arguments,
-	 * clear it before we add things to it to prevent a memory leak. */
+	 * clear it first to avoid memory leaks. */
 	if(LC_flagless_args) {
 		free(LC_flagless_args);
 		LC_flagless_args = NULL;
 	}
 
-	/* Bail if the LC_flags array is not properly set up. */
-	if(!LC_flags) return LC_NO_ARGS;
-
-	/* Push the arguments onto the root node in from first to last. */
 	LC_flagless_args_length = 0;
-	current = &root;
 
-	/* Get our program name out. */
-	LC_prog_name = argv[0];
-
-	/* Scan in the arguments. */
+	/* Push the arguments into the list; the root node has argv[0]. */
+	node_t *current = &root;
 	for(int i = 0; i < argc; i++) {
-		LC_flagless_args_length++;
-
-		/* Get the reference to the argument. */
 		current -> string = argv[i];
 
-		/* If there's no more arguments, bail without allocating
-		 * memory. */
+		// Don't initialise node -> next for the last node.
 		if(i == argc - 1) break;
 
 		/* Allocate the memory for the next argument. */
@@ -108,81 +109,57 @@ int LC_read(int argc, char **argv) {
 		current = current -> next;
 	}
 
-	node_t *delete = NULL; // Used to mark for node deletion.
+	LC_flagless_args_length = argc - 1; // Not including the root node.
 
-	/* The root node is our program name so we can skip it.  */
-	for(node_t *i = root.next; i;) { // Iterate in main loop body.
+	/* Iterate through the flags, process them, and delete them if
+	 * appropriate. */
+
+	/* We always look at the node after the node in the iterator. */
+	for(node_t *i = &root; i -> next;) {
 		/* A `-' by itself is usually used to stand in for stdin or
 		 * stdout. */
-		if(!strcmp(i -> string, "-")) goto cont;
+		if(!strcmp(i -> next -> string, "-")) i = i -> next;
 
 		/* If there's a `--' that's just sitting in the list marks the
 		 * end of the flags on the command line. */
-		if(!strcmp(i -> string, "--")) {
-			pop_node(i -> prev);
+		else if(!strcmp(i -> next -> string, "--")) {
+			pop_node(i);
 			break;
 		}
 
-		/* Two hyphens for long flags, one for short flags. */
-		if(i -> string[0] == '-') {
-			if(i -> string[1] == '-') {
-				int ret = evaluate_lflag(i);
+		/* One hyphen for short flags, two for long flags. */
+		else if(i -> next -> string[0] == '-') {
+			if(i -> next -> string[1] == '-') {
+				int ret = evaluate_lflag(i -> next);
 				if(ret != LC_OK) return ret;
 			}
 
 			else {
-				int ret = evaluate_sflags(i);
+				int ret = evaluate_sflags(i -> next);
 				if(ret != LC_OK) return ret;
 			}
 
+			pop_node(i);
+			continue;
 		}
 
-		else goto cont; // It's a flagless argument; don't delete it.
-
-		/* Mark the current node for deletion and step forward. */
-		delete = i;
-	cont:	i = i -> next;
-
-		/* Destroy nodes marked for deletion. */
-		if(delete == NULL) continue;
-
-		/* Remove the node and then glue together the two halves of the
-		 * list. */
-		if(delete -> next) delete -> next -> prev = delete -> prev;
-
-		delete -> prev -> next = delete -> next;
-		LC_flagless_args_length--;
-
-		free(delete);
-		delete = NULL;
+		/* Flagless argument. */
+		i = i -> next;
 	}
 
-	/* At this point all that's left is getting an array for the flagless
-	 * arguments and deallocating the list. We first reduce the count by 1
-	 * to account for the root node being just the program name. */
-	LC_flagless_args_length--;
+	/* The remaining nodes are flagless arguments. */
 
-	/* Calling malloc() with a potential 0 is not portable. */
+	/* Calling malloc() with a zero size is not portable. */
 	LC_flagless_args = LC_flagless_args_length?
 		malloc(sizeof(char *) * LC_flagless_args_length) :
 		malloc(sizeof(char *));
 
 	if(!LC_flagless_args) return LC_MALLOC_ERR;
 
-	/* Loop through the linked list to copy the references and deallocate
-	 * the nodes as we go along. */
-	current = root.next;
-
+	/* Copy the flagless arguments over. */
 	for(size_t i = 0; i < LC_flagless_args_length; i++) {
-		LC_flagless_args[i] = current -> string;
-
-		/* This process will exit having left current as a NULL
-		* pointer, which is nice. */
-		node_t *delete = current;
-		current = current -> next;
-
-		/* Don't delete the root node, as that's static allocation. */
-		if(delete != &root) free(delete);
+		LC_flagless_args[i] = pop_node(&root);
+		LC_flagless_args_length++; // pop_node() decrements this value.
 	}
 
 	/* Return out successfully. */
@@ -190,22 +167,23 @@ int LC_read(int argc, char **argv) {
 }
 
 static int evaluate_lflag(node_t *node) {
-	/* Match the first equals-to sign we find within the string, in case
-	 * we have a string of the format `--param=value'. */
-	char *equals_ch = strchr(node -> string, '=');
+	/* Processing a long flag. */
+	processing_lflag = true;
 
-	/* Change it to a NULL char if we found it. */
+	/* Change the first equal character in the string since to a null byte
+	 * since it splits the flag from its (first) value. */
+	char *equals_ch = strchr(node -> string, '=');
 	if(equals_ch) *equals_ch = 0;
 
-	/* Split the strings and store NULLs if there's no data there. */
-	char *lflag = &node -> string[2];
+	/* Split the strings and store NULLs if there's no data. */
+	char *lflag = &node -> string[2]; // Skip the '--'.
 	char *value = equals_ch? equals_ch + 1: NULL;
 
 	/* See if we can find the flag this corresponds to. */
 	LC_flag_t *flag = find_flag(lflag, 0);
 
 	if(!flag) {
-		fprintf(stderr, "%s: error: unknown flag '%s'.\n",
+		fprintf(stderr, "%s: error: unknown flag '--%s'.\n",
 			LC_prog_name, lflag
 		);
 
@@ -223,6 +201,15 @@ static int evaluate_lflag(node_t *node) {
 
 	flag -> readonly = true;
 
+	/* If there's no variable but there's a value specified, error out. */
+	if(!flag -> var_ptr && value) {
+		fprintf(stderr, "%s: error: the flag `--%s' does not take any"
+			"values.\n", LC_prog_name, lflag
+		);
+
+		return LC_BAD_VAL;
+	}
+
 	/* If there's no variable to be dealt with now, skip this section. */
 	if(flag -> var_ptr) {
 		/* Process the variable. */
@@ -235,7 +222,6 @@ static int evaluate_lflag(node_t *node) {
 			break;
 
 		case LC_BOOL_VAR:
-			/* Set the flag variable and exit out. */
 			*(bool *) flag -> var_ptr = flag -> value;
 			break;
 
@@ -253,8 +239,8 @@ static int evaluate_lflag(node_t *node) {
 	if(flag -> function) {
 		int ret = flag -> function(flag);
 
-		/* Save error information and bail if need be. */
 		if(ret != LC_OK) {
+			/* Save the error information. */
 			LC_err_function = flag -> function;
 			LC_function_errno = ret;
 			return LC_FUNC_ERR;
@@ -265,13 +251,19 @@ static int evaluate_lflag(node_t *node) {
 }
 
 static int evaluate_sflags(node_t *node) {
+	/* Processing a long flag. */
+	processing_lflag = false;
+
 	/* As long as we have characters to process, loop over the flags.
-	 * Ignore the leading `-', though. */
+	 * Also, Ignore the leading `-'. */
 	for(size_t i = 1; node -> string[i]; i++) {
+		/* If the string has no length, send a NULL instead. */
 		int ret = evaluate_sflag(node, node -> string[i],
-			&node -> string[i + 1]
+			node -> string[i + 1]? &node -> string[i + 1]: NULL
 		);
 
+		/* Using the value means all the other characters have been
+		 * used for that value. Exit out. */
 		if(ret == LC_OK_VALUE_USED) return LC_OK;
 		else if(ret != LC_OK) return ret;
 	}
@@ -280,10 +272,6 @@ static int evaluate_sflags(node_t *node) {
 }
 
 static int evaluate_sflag(node_t *node, char sflag, char *value) {
-	/* Check if we actually have a value. */
-	bool has_value = strlen(value);
-	if(!has_value) value = NULL;
-
 	/* See if we can find the flag this corresponds to. */
 	LC_flag_t *flag = find_flag(NULL, sflag);
 
@@ -318,9 +306,7 @@ static int evaluate_sflag(node_t *node, char sflag, char *value) {
 			break;
 
 		case LC_BOOL_VAR:
-			/* Set the flag variable and exit out. */
 			*(bool *) flag -> var_ptr = flag -> value;
-			has_value = false;
 			break;
 
 		case LC_OTHER_VAR:
@@ -345,7 +331,10 @@ static int evaluate_sflag(node_t *node, char sflag, char *value) {
 		}
 	}
 
-	return has_value && flag -> var_ptr? LC_OK_VALUE_USED: LC_OK;
+	/* Bool setting doesn't take a value on the command line, but other
+	 * types of variables do. */
+	return flag -> var_ptr && flag -> var_type != LC_BOOL_VAR?
+		LC_OK_VALUE_USED: LC_OK;
 }
 
 static LC_flag_t *find_flag(const char *lflag, char sflag) {
@@ -353,7 +342,7 @@ static LC_flag_t *find_flag(const char *lflag, char sflag) {
 	for(size_t i = 0; i < LC_flags_length; i++) {
 		if(sflag == LC_flags[i].short_flag) return &LC_flags[i];
 
-		if(!lflag) continue; // Don't pass null pointer to strcmp.
+		if(!lflag) continue; // Don't pass null pointers to strcmp.
 		if(!LC_flags[i].long_flag) continue;
 
 		if(!strcmp(lflag, LC_flags[i].long_flag)) return &LC_flags[i];
@@ -364,18 +353,18 @@ static LC_flag_t *find_flag(const char *lflag, char sflag) {
 }
 
 static int get_strings(LC_flag_t *flag, node_t *node, char *value) {
-	/* If we're dealing with a single string and that's already provided,
-	 * then that makes our lives quite simple. */
+	/* A single string with a given value can be set easily. */
 	if(!flag -> arr_length && value) {
 		*(char **) flag -> var_ptr = value;
 		return LC_OK;
 	}
 
-	/* If there's only one value and it's not already been provided, we
-	 * need to get it from the next node. */
-	else if(!flag -> arr_length) {
-		/* Make sure the node exists. */
-		if(!node -> next) {
+	/* If it's just a single variable, get the value from the next node. */
+	if(!flag -> arr_length && !value) {
+		/* Get the value and remove the node. */
+		*(char **) flag -> var_ptr = pop_node(node);
+
+		if(!*(char **) flag -> var_ptr) {
 			fprintf(stderr, "%s: error: the flag ", LC_prog_name);
 			print_flag(flag);
 			fprintf(stderr, " needs an additional argument.\n");
@@ -383,45 +372,43 @@ static int get_strings(LC_flag_t *flag, node_t *node, char *value) {
 			return LC_NO_VAL;
 		}
 
-		/* Get the value and remove the node. */
-		*(char **) flag -> var_ptr = pop_node(node);
 		return LC_OK;
 	}
 
-	/* Since we have an array, we're going to need to figure out how many
-	 * variables there are and how much space to allocate for them. */
+	/* Since we have an array, check how many values we have in total. */
 	*(flag -> arr_length) = value? 1: 0;
 
 	for(node_t *i = node -> next; i; i = i -> next) {
-		if(strcmp(i -> string, "--")) ++*(flag -> arr_length);
-		else {
-			/* We can simply get rid of the `--'. */
+		/* Check that the value isn't `--'. */
+		if(!strcmp(i -> string, "--")) {
+			/* Get rid of the `--', which marks the end of the
+			 * array. Break out. */
 			pop_node(i -> prev);
 			break;
 		}
+
+		++*(flag -> arr_length);
 	}
 
-	/* If the array has already been allocated, de-allocate it and let's
-	 * just hope the user hasn't made it static allocation. */
+	/* If the array has already been allocated, de-allocate it. */
 	if(*(char ***) flag -> var_ptr) free(*(char ***) flag -> var_ptr);
 
-	/* Cannot portably call malloc() with a size of zero. */
-	/* Allocate the memory for the array. Also, yes, the type is cursed. */
+	/* Allocate the memory for the array. We cannot portably call malloc()
+	 * with a size of zero. (This type is cursed.) */
 	*(char ***) flag -> var_ptr = *(flag -> arr_length)?
 		malloc(*(flag -> arr_length) * sizeof(char *)) :
 		malloc(sizeof(char *));
 
 	if(!*(char ***) flag -> var_ptr) return LC_MALLOC_ERR;
 
-	/* Copy value passed to us first. */
+	/* Copy or move the values over. */
 	if(value) (*(char ***) flag -> var_ptr)[0] = value;
 
-	/* Loop over and copy the other values. */
 	for(size_t i = value? 1: 0; i < *(flag -> arr_length); i++) {
 		(*(char ***) flag -> var_ptr)[i] = pop_node(node);
 	}
 
-	/* Let's go ahead and verify that the array length is correct. */
+	/* Let's go ahead and verify that the array length is appropriate. */
 	if(*(flag -> arr_length) < flag -> min_arr_length) {
 		fprintf(stderr, "%s: error: the flag ", LC_prog_name);
 		print_flag(flag);
@@ -441,8 +428,7 @@ static int get_strings(LC_flag_t *flag, node_t *node, char *value) {
 	return LC_OK;
 }
 static int get_others(LC_flag_t *flag, node_t *node, char *value) {
-	/* If we're dealing with a single string and that's already provided,
-	 * then that makes our lives quite simple. */
+	/* A single string with a given value can be set easily. */
 	if(!flag -> arr_length && value) {
 		/* We need to verify that they are the correct format and that
 		 * sscanf() didn't choke on the input. */
@@ -474,11 +460,12 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 		return LC_OK;
 	}
 
-	/* If there's only one value and it's not already been provided, we
-	 * need to get it from the next node. */
-	else if(!flag -> arr_length) {
-		/* Make sure the node exists. */
-		if(!node -> next) {
+	/* If it's just a single variable, get the value from the next node. */
+	if(!flag -> arr_length && !value) {
+		/* Get the string. */
+		value = pop_node(node);
+
+		if(!value) {
 			fprintf(stderr, "%s: error: the flag ", LC_prog_name);
 			print_flag(flag);
 			fprintf(stderr, " needs an additional argument.\n");
@@ -486,9 +473,8 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 			return LC_NO_VAL;
 		}
 
-		/* Get the value and remove the node. */
-		value = pop_node(node);
-
+		/* Inject our tests into the format string and process the
+		 * value. */
 		if(!flag -> fmt_string) return LC_NULL_FORMAT_STR;
 		size_t fmt_len = strlen(flag -> fmt_string);
 
@@ -515,12 +501,13 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 	}
 
 	/* Since we have an array, we're going to need to figure out how many
-	 * variables there are and how much space to allocate for them. */
+	 * values there are in total. */
 
 	/* We need a temporary variable to store the data as sscanf() tries to
 	 * read it. */
 	char testing_area[flag -> var_length];
 
+	/* Do our standard sscanf tests, reading the value provided to us. */
 	if(!flag -> fmt_string) return LC_NULL_FORMAT_STR;
 	size_t fmt_len = strlen(flag -> fmt_string);
 
@@ -534,7 +521,7 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 	size_t len = value? strlen(value): 0;
 	int ret = value? sscanf(value, fmt_debug, testing_area, &bytes): 1;
 
-	/* Error out if sscanf() can't read the value. */
+	/* Error out if sscanf() can't read the value provided to us. */
 	if(ret != 1 || bytes != len) {
 		fprintf(stderr, "%s: error: the string `%s' is invalid for "
 			"the flag", LC_prog_name, value
@@ -545,51 +532,51 @@ static int get_others(LC_flag_t *flag, node_t *node, char *value) {
 		return LC_BAD_VAL;
 	}
 
+	/* Since we have an array, check how many values we have in total. */
 	*(flag -> arr_length) = value? 1: 0;
 
 	for(node_t *i = node -> next; i; i = i -> next) {
+		/* Check that the value isn't `--'. */
 		if(!strcmp(i -> string, "--")) {
-			/* We want to get rid of the "--". */
+			/* Get rid of the `--', which marks the end of the
+			 * array. Break out. */
 			pop_node(i -> prev);
 			break;
 		}
 
+		/* Check if this is a valid value for the given datatype. */
 		ret = sscanf(i -> string, fmt_debug, testing_area, &bytes);
 		if(ret != 1 || bytes != strlen(i -> string)) break;
 
 		++*(flag -> arr_length);
 	}
 
-	/* If the array has already been allocated, de-allocate it and let's
-	 * just hope the user hasn't made it static allocation. */
+	/* If the array has already been allocated, de-allocate it. */
 	if(*(void **) flag -> var_ptr) free(*(void **) flag -> var_ptr);
 
-	/* Allocate the memory for the array. Also, yes, another cured type. */
-	/* Cannot portably call malloc() with a size of zero. */
+	/* Allocate the memory for the array. We cannot portably call malloc()
+	 * with a size of zero. (This type is cursed.) */
 	*(void **) flag -> var_ptr = *(flag -> arr_length)?
 		malloc(*(flag -> arr_length) * flag -> var_length) :
 		malloc(sizeof(void *));
 
 	if(!*(void **) flag -> var_ptr) return LC_MALLOC_ERR;
 
-	/* If we were passed a value directly, then go ahead and scan that over
-	 * first. */
+	/* Scan over the value passed directly to us first. */
 	if(value) {
-		if(!flag -> fmt_string) return LC_NULL_FORMAT_STR;
 		sscanf(value, flag -> fmt_string, *(void **) flag -> var_ptr);
 	}
 
-	/* Loop over and copy the other values. */
+	/* Loop over and copy all the other values. */
 	for(size_t i = value? 1: 0; i < *(flag -> arr_length); i++) {
 		/* We need to use char ** here to stop the compiler complaining
 		 * about doing pointer arithmetic with void *. */
-		if(!flag -> fmt_string) return LC_NULL_FORMAT_STR;
-		sscanf(pop_node(node), flag -> fmt_string, 
+		sscanf(pop_node(node), flag -> fmt_string,
 			*(char **) flag -> var_ptr + i * flag -> var_length
 		);
 	}
 
-	/* Let's go ahead and verify that the array length is correct. */
+	/* Let's go ahead and verify that the array length is acceptable. */
 	if(*(flag -> arr_length) < flag -> min_arr_length) {
 		fprintf(stderr, "%s: error: the flag ", LC_prog_name);
 		print_flag(flag);
@@ -618,8 +605,7 @@ static char *pop_node(node_t *node) {
 	node_t *next_to_next = node -> next -> next;
 	if(next_to_next) next_to_next -> prev = node;
 
-	/* Get the string out of the node we're going to delete and then delete
-	 * it. */
+	/* Get the string out of the node and free it. */
 	char *string = node -> next -> string;
 	free(node -> next);
 
@@ -631,19 +617,26 @@ static char *pop_node(node_t *node) {
 }
 
 static void print_flag(LC_flag_t *flag) {
-	/* If both the long and short flags are set, then print them both. */
-	if(flag -> long_flag && isprint(flag -> short_flag)) {
-		fprintf(stderr, "'--%s' / '-%c'",
-			flag -> long_flag, flag -> short_flag
-		);
-	}
+	/* If we're processing a long flag, print long flags preferentially,
+	 * and vice versa. One or the other must be set already for us to have
+	 * been processing it as a flag. */
+	if(processing_lflag) {
+		if(flag -> long_flag) {
+			fprintf(stderr, "'--%s'", flag -> long_flag);
+		}
 
-	/* If only one or the other is set, then print the appropriate one. */
-	else if(flag -> long_flag) {
-		fprintf(stderr, "'--%s'", flag -> long_flag);
+		else if(isprint(flag -> short_flag)) {
+			fprintf(stderr, "'-%c'", flag -> short_flag);
+		}
 	}
 
 	else {
-		fprintf(stderr, "'-%c'", flag -> short_flag);
+		if(isprint(flag -> short_flag)) {
+			fprintf(stderr, "'-%c'", flag -> short_flag);
+		}
+
+		else if(flag -> long_flag) {
+			fprintf(stderr, "'--%s'", flag -> long_flag);
+		}
 	}
 }

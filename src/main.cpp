@@ -24,7 +24,7 @@
 LC_flag_t libClame::make_call(
 	std::string lflag, char sflag, libClame::callback_t function
 ){
-	/* Make a copy of the flag that won't get mutated. */
+	/* Copy the flag since lflag is invalid after function scope. */
 	libClame::__string_list.push_back(std::move(lflag));
 	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
 
@@ -38,6 +38,9 @@ LC_flag_t libClame::make_call(
 }
 
 /* Flag to set a boolean to a given value. */
+
+/* We'll use a helper function that takes all possible arguments, and call it
+ * through each of the overloaded interface functions we need to make. */
 static LC_flag_t __make_bool(
 	std::string& lflag, char sflag, bool& var, bool val,
 	libClame::callback_t function
@@ -55,6 +58,7 @@ static LC_flag_t __make_bool(
 	);
 }
 
+/* Overloaded interface functions. */
 LC_flag_t libClame::make_bool(
 	std::string lflag, char sflag, bool& var, bool val
 ){
@@ -70,6 +74,8 @@ LC_flag_t libClame::make_bool(
 }
 
 /* Flags to get config strings */
+
+/* Same trick as with the bools. */
 LC_flag_t __make_string(
 	std::string& lflag, char sflag, std::string* string_ptr,
 	libClame::callback_t function
@@ -78,7 +84,9 @@ LC_flag_t __make_string(
 	libClame::__string_list.push_back(std::move(lflag));
 	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
 
-	/* Pointer to the string copied from argv[] that we'll share with C. */
+	/* Pointer to the string copied from argv[] that we'll share with C.
+	 * It has to be declared in the table since it lives beyond the scope
+	 * of these helper functions. */
 	auto& c_string = libClame::__c_string_table[c_lflag] = NULL;
 
 	/* Add the function to our shadow table. */
@@ -89,10 +97,8 @@ LC_flag_t __make_string(
 		/* Dereference the pointer to get a C++ reference. */
 		auto& string = *string_ptr;
 
-		/* Get the reference to the string we were sharing with C */
+		/* Get a reference to the original items we instantialised. */
 		const auto& c_string = libClame::__c_string_table[c_lflag];
-
-		/* Get the reference to the function we were provided. */
 		const auto& function = libClame::__shadow_table[c_lflag];
 
 		/* Move the value to a C++ string. */
@@ -108,6 +114,7 @@ LC_flag_t __make_string(
 	);
 }
 
+/* Overloaded interface functions. */
 LC_flag_t libClame::make_string(
 	std::string lflag, char sflag, std::string& string,
 	libClame::callback_t function
@@ -115,131 +122,13 @@ LC_flag_t libClame::make_string(
 	return __make_string(lflag, sflag, &string, function);
 }
 
+/* Overloaded interface functions. */
 LC_flag_t libClame::make_string(
 	std::string lflag, char sflag, std::string& string
 ){
 	/* Pass in a dummy lambda that does nothing. */
 	return __make_string(lflag, sflag, &string, [](){});
 }
-
-template<template<typename> typename C>
-requires libClame::ok_container<C, std::string>
-static LC_flag_t __make_str_arr(
-	std::string& lflag, char sflag, C<std::string>* strings_ptr,
-	libClame::limits_t limits,
-	libClame::callback_t function
-){
-	/* Make a copy of the flag that won't get mutated. */
-	libClame::__string_list.push_back(std::move(lflag));
-	const auto c_lflag = (*libClame::__string_list.rbegin()).c_str();
-
-	/* Pointer to C string arr copied from argv[] that we'll manage. */
-	auto& c_strarr_entry = libClame::__c_strarr_table[c_lflag] = {NULL, 0};
-	auto& c_strarr = std::get<char**>(c_strarr_entry);
-	auto& c_strarr_len = std::get<size_t>(c_strarr_entry);
-
-	/* Add the function to our shadow table. Empty lambda if nothing was
-	 * provided in the optional. */
-	libClame::__shadow_table[c_lflag] = function;
-
-	/* Add the wrapper function to our call table. */
-	libClame::__call_table[c_lflag] = [c_lflag, strings_ptr](){
-		/* Dereference the pointer to get a C++ reference. */
-		auto& strings = *strings_ptr;
-
-		/* Get the reference to the array we were sharing with C */
-		auto& c_strarr_entry = libClame::__c_strarr_table[c_lflag];
-		auto& c_strarr = std::get<char**>(c_strarr_entry);
-		auto& c_strarr_len = std::get<size_t>(c_strarr_entry);
-
-		/* Get the reference to the function we were provided. */
-		const auto& function = libClame::__shadow_table[c_lflag];
-
-		/* Clear the strings. */
-		strings.clear();
-
-		/* Move the values to a C++ string list. */
-		for(size_t i = 0; i < c_strarr_len; i++) {
-			strings.push_back(c_strarr[i]);
-		}
-
-		/* Free the array (but not the elements it points to.) */
-		std::free(c_strarr);
-		c_strarr = NULL;
-
-		/* Run the callback code. */
-		function();
-	};
-
-	/* Get the limits for the array if they are defined. */
-	const auto set_limits = limits;
-
-	const auto& min = std::get<0>(set_limits);
-	const auto& max = std::get<1>(set_limits);
-
-	/* Make the structure. */
-	return LC_MAKE_STRING_ARR_BOUNDED_F(
-		c_lflag, sflag, c_strarr, c_strarr_len, min, max,
-		libClame::__interceptor
-	);
-}
-
-template<template<typename> typename C>
-requires libClame::ok_container<C, std::string>
-LC_flag_t libClame::make_str_arr(
-	std::string lflag, char sflag, C<std::string>& strings
-){
-	return __make_str_arr(lflag, sflag, &strings, {0, SIZE_MAX}, [](){});
-}
-
-template<template<typename> typename C>
-requires libClame::ok_container<C, std::string>
-LC_flag_t libClame::make_str_arr(
-	std::string lflag, char sflag, C<std::string>& strings,
-	libClame::callback_t function
-){
-	return __make_str_arr(lflag, sflag, &strings, {0, SIZE_MAX}, function);
-}
-
-template<template<typename> typename C>
-requires libClame::ok_container<C, std::string>
-LC_flag_t libClame::make_str_arr(
-	std::string lflag, char sflag, C<std::string>& strings,
-	libClame::limits_t limits
-){
-	return __make_str_arr(lflag, sflag, &strings, limits, [](){});
-}
-
-template<template<typename> typename C>
-requires libClame::ok_container<C, std::string>
-LC_flag_t libClame::make_str_arr(
-	std::string lflag, char sflag, C<std::string>& strings,
-	libClame::limits_t limits, libClame::callback_t function
-){
-	return __make_str_arr(lflag, sflag, &strings, limits, function);
-}
-
-/* Force templates to instantialise */
-#define instantialise(c) \
-template LC_flag_t libClame::make_str_arr<c>( \
-	std::string, char, c<std::string>& \
-); \
-\
-template LC_flag_t libClame::make_str_arr<c>( \
-	std::string, char, c<std::string>&, libClame::callback_t \
-); \
-\
-template LC_flag_t libClame::make_str_arr<c>( \
-	std::string, char, c<std::string>&, libClame::limits_t \
-); \
-\
-template LC_flag_t libClame::make_str_arr<c>( \
-	std::string, char, c<std::string>&, libClame::limits_t, \
-	libClame::callback_t \
-); \
-
-instantialise(std::list)
-instantialise(std::vector)
 
 /* Command to begin command-line argument processing. */
 void libClame::read(int argc, char** argv, std::vector<LC_flag_t>& flags) {
@@ -290,7 +179,7 @@ std::unordered_map<std::string, std::tuple<char**, size_t>>
 
 /* Function call __interceptor. */
 int libClame::__interceptor(LC_flag_t* c_flag) {
-	/* Synthesize our flags into a C++ type. */
+	/* Synthesize our flastringgs into a C++ type. */
 	const auto lflag = std::string{c_flag -> long_flag};
 
 	/* Look the correct C++ function up in the calltable. */

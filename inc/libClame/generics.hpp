@@ -102,5 +102,6 @@ namespace libClame {
 	/* The code for these templated functions. */
 	#include <libClame/__generics.hpp>
 }
+
 /* End Header Guard */
 #endif

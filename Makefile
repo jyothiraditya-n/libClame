@@ -18,44 +18,39 @@
 ifeq ($(shell [ -d ".config/" ] && echo "config"),)
 ifeq ($(filter config,$(MAKECMDGOALS)),)
 ifeq ($(filter autoconfig,$(MAKECMDGOALS)),)
-$(info *** Configuration missing; running `make autoconfig'.)
+
+$(info *** Configuration missing; running 'make autoconfig'.)
 $(shell make autoconfig)
+
 endif
 endif
 endif
 
-# Compilation Flags for Make
+# We want to build with debugging symbols as a default.
 .DEFAULT_GOAL = debug
 
-# Compilation Flags for C
+# Getting Config Values.
 CC = $(shell cat .config/cc.conf)
-
-ifneq ($(filter release,$(MAKECMDGOALS)),)
-CFLAGS = $(shell cat .config/cflags_release.conf)
-else
-CFLAGS = $(shell cat .config/cflags_debug.conf)
-endif
-
-# Compilation Flags for C++
 CPP = $(shell cat .config/cpp.conf)
-
-ifneq ($(filter release,$(MAKECMDGOALS)),)
-CCFLAGS = $(shell cat .config/ccflags_release.conf)
-else
-CCFLAGS = $(shell cat .config/ccflags_debug.conf)
-endif
-
-# Compilation Flags for Linking
 LD = $(shell cat .config/ld.conf)
 AR = $(shell cat .config/ar.conf)
 
 LD_LIBS = $(shell cat .config/ld_libs.conf)
 
-# Command to make the LaTeX docs.
 ifneq ($(filter release,$(MAKECMDGOALS)),)
+
+CFLAGS = $(shell cat .config/cflags_release.conf)
+CCFLAGS = $(shell cat .config/ccflags_release.conf)
 LATEX = $(shell cat .config/latex_release.conf)
+TEST_FLAGS = -valgrind
+
 else
+
+CFLAGS = $(shell cat .config/cflags_debug.conf)
+CCFLAGS = $(shell cat .config/ccflags_debug.conf)
 LATEX = $(shell cat .config/latex_debug.conf)
+TEST_FLAGS = -nogrind
+
 endif
 
 # Files that need to be created.
@@ -65,13 +60,18 @@ build_scripts = $(wildcard *.sh)
 test_scripts = $(wildcard tests/*.sh)
 scripts = $(build_scripts) $(test_scripts)
 
+c_srcs = $(shell find * -type f -name "*.c")
+cpp_srcs += $(shell find * -type f -name "*.cpp")
+
+c_headers = $(shell find inc/ -type f -name "*.h")
+cpp_headers += $(shell find inc/ -type f -name "*.hpp")
+headers = $(c_headers) $(cpp_headers)
+
 c_texs = $(patsubst demos/%.c,build/docs/%.c.tex,$(wildcard demos/*.c))
 cpp_texs = $(patsubst demos/%.cpp,build/docs/%.cpp.tex,$(wildcard demos/*.cpp))
 texs = $(c_texs) $(cpp_texs)
 
 docs = $(texs) $(wildcard docs/*)
-headers = $(wildcard inc/*.h) $(wildcard inc/libClame/*.h)
-headers = $(wildcard inc/*.hpp) $(wildcard inc/libClame/*.hpp)
 
 c_objs = $(patsubst src/%.c,build/src/%.o,$(wildcard src/*.c))
 cpp_objs = $(patsubst src/%.cpp,build/src/%_cpp.o,$(wildcard src/*.cpp))
@@ -79,7 +79,7 @@ objs = $(c_objs) $(cpp_objs)
 
 c_demos = $(patsubst demos/%.c,build/%_demo,$(wildcard demos/*.c))
 cpp_demos += $(patsubst demos/%.cpp,build/%_cpp_demo,$(wildcard demos/*.cpp))
-demos = $(c_demos) $(cpp_demos)
+demos = $(c_demos) $(cpp_de_mos)
 
 c_tests = $(patsubst tests/%.c,build/%_test,$(wildcard tests/*.c))
 cpp_tests += $(patsubst tests/%.cpp,build/%_cpp_test,$(wildcard tests/*.cpp))
@@ -136,13 +136,8 @@ build/libClame.pdf : $(docs)
 	mv build/docs/main.pdf build/libClame.pdf
 
 # Commands
-.PHONY : config autoconfig release debug demos docs test clean deep-clean
-
-config : $(build_scripts)
-	./configure.sh
-
-autoconfig : $(build_scripts)
-	./configure.sh -auto
+.PHONY : release debug demos docs clean deep-clean
+.PHONY : config autoconfig tidy format
 
 release : build/libClame.a
 
@@ -157,12 +152,22 @@ clean :
 
 deep-clean : clean
 	-rm -r .config/
+config : $(build_scripts)
+
+	./configure.sh
+
+autoconfig : $(build_scripts)
+	./configure.sh -auto
+
+tidy :
+	clang-tidy $(c_srcs) $(headers) -- $(CFLAGS)
+	cland-tidy $(cpp_srcs) $(headers) -- $(CCFLAGS)
 
 # Testing requires a little bit of hacky coding.
 runnable_tests = $(patsubst %,run-%,$(test_scripts))
 
-.PHONY : $(runnable_tests)
+.PHONY : $(runnable_tests) test
 $(runnable_tests) : run-% : % $(tests)
-	$<
+	$< $(TEST_FLAGS)
 
 test : $(runnable_tests)

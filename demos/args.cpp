@@ -74,10 +74,6 @@ std::list<double> coords;
  * without preceding flags. */
 std::vector<std::string> files;
 
-/* These helper functions are specified as part of the arguments structure. */
-void about_func();
-void help_func();
-
 /* We want a vector of the arguments.  */
 std::vector<LC_flag_t> flags;
 
@@ -99,10 +95,16 @@ void print_arr(const std::string header, const C<T>& arr) {
 
 int main(int argc, char **argv) {
 	/* --about, -a: prints the about dialogue. */
-	flags.push_back(libClame::make_call("about", 'a', about_func));
+	flags.push_back(libClame::make_call("about", 'a', [](){
+		std::cout << LICENCE_TEXT;
+		std::exit(0);
+	}));
 
 	/* --help, -h: prints the help dialogue. */
-	flags.push_back(libClame::make_call("help", 'h', help_func));
+	flags.push_back(libClame::make_call("help", 'h', [](){
+		std::cout << HELP_TEXT(libClame::prog_name);
+		std::exit(0);
+	}));
 
 	/* --flag, -f: sets the flag to true. */
 	flags.push_back(libClame::make_bool("flag", 'f', flag, true));
@@ -164,15 +166,5 @@ int main(int argc, char **argv) {
 	print_arr("Files", files);
 
 	std::cout << "\n\n"; // Two extra newlines for padding.
-	std::exit(0);
-}
-
-void about_func() {
-	std::cout << LICENCE_TEXT;
-	std::exit(0);
-}
-
-void help_func() {
-	std::cout << HELP_TEXT(libClame::prog_name);
 	std::exit(0);
 }
