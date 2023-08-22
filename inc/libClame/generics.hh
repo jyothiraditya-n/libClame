@@ -15,11 +15,11 @@
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
 /* Begin Header Guard. */
-#ifndef LC_GENERICS_HPP
-#define LC_GENERICS_HPP 1
+#ifndef LC_GENERICS_HH
+#define LC_GENERICS_HH 1
 
 /* Main Header File. */
-#include <libClame.hpp>
+#include <libClame.hh>
 
 /* Header File Namespace. */
 namespace libClame {
@@ -100,7 +100,7 @@ namespace libClame {
 	);
 
 	/* The code for these templated functions. */
-	#include <libClame/__generics.hpp>
+	#include <libClame/__generics.hh>
 }
 
 /* End Header Guard */

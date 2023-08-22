@@ -49,8 +49,8 @@
 #define LC_REQ_VER 1
 #define LC_REQ_SUBVER 2
 
-#include <libClame.hpp>
-#include <libClame/generics.hpp>
+#include <libClame.hh>
+#include <libClame/generics.hh>
 
 /* We have some different variables to demonstrate the things that the library
  * can handle, as well as the way that someone might go about implementing

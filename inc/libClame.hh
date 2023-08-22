@@ -15,8 +15,8 @@
  * this program. If not, see <https://www.gnu.org/licenses/>. */
 
 /* Begin Header Guard. */
-#ifndef LIBCLAME_HPP
-#define LIBCLAME_HPP 1
+#ifndef LIBCLAME_HH
+#define LIBCLAME_HH 1
 
 /* Standard Library Includes. */
 #include <string>
